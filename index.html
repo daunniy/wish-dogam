@@ -704,7 +704,7 @@ document.addEventListener("click",async e=>{
   const t=e.target;
   if(t.closest("#userBtn"))return openUser();
   if(t.closest("#uGoogle")){const {error}=await sb.auth.signInWithOAuth({provider:"google",options:{redirectTo:location.origin+location.pathname}});if(error)toastSafe("구글 로그인을 시작하지 못했어요: "+error.message);return}
-  if(t.closest("#uKakao")){const {error}=await sb.auth.signInWithOAuth({provider:"kakao",options:{redirectTo:location.origin+location.pathname,scopes:"profile_nickname profile_image"}});if(error)toastSafe("카카오 로그인을 시작하지 못했어요: "+error.message);return}
+  if(t.closest("#uKakao")){const {error}=await sb.auth.signInWithOAuth({provider:"kakao",options:{redirectTo:location.origin+location.pathname}});if(error)toastSafe("카카오 로그인을 시작하지 못했어요: "+error.message);return}
   if(t.closest("#uLater")){$u("uOverlay").hidden=true;try{sessionStorage.setItem("dogam-later","1")}catch(_){}return}
   if(t.id==="uOverlay"||t.closest("#uClose")){$u("uOverlay").hidden=true;return}
   if(t.closest("#uSignup")){const em=$u("uEmail").value.trim(),pw=$u("uPw").value;const er=$u("uErr");
