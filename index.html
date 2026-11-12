@@ -439,6 +439,13 @@ h1::after{content:"";display:inline-block;width:.42em;height:.42em;margin-left:.
 .ulink{color:var(--label2);font-size:14px;text-decoration:underline;text-underline-offset:3px;padding:6px;align-self:center}
 .ubk{background:var(--card);border:2px solid var(--edge);border-radius:20px;padding:12px 16px}.ubk summary{cursor:pointer;color:var(--label2);font-size:14px}.ubk .ubtns{margin-top:10px}
 .uhead h3{font-size:22px}
+.gbtn{height:50px;border-radius:999px;background:#fff;color:#3c3c3c;box-shadow:inset 0 0 0 2px var(--edge);display:flex;align-items:center;justify-content:center;gap:10px;font-family:var(--round);font-size:17px;cursor:pointer}
+.gbtn:hover{box-shadow:inset 0 0 0 2px var(--pink)}
+.uor{display:flex;align-items:center;gap:10px;color:var(--label2);font-size:13px;margin:-4px 4px}.uor::before,.uor::after{content:"";flex:1;border-top:1.5px dashed var(--edge)}
+
+/* 등장 애니메이션 */
+#list .rv{opacity:0;transform:translateY(22px) scale(.97)}
+#list .rv.in{opacity:1;transform:none;transition:opacity .5s ease,transform .6s cubic-bezier(.2,.9,.25,1.15)}
 </style>
 </head>
 <body>
@@ -662,6 +669,7 @@ async function initSB(){
   if(!window.supabase){await new Promise((ok,no)=>{const s=document.createElement("script");s.src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js";s.onload=ok;s.onerror=no;document.head.appendChild(s)}).catch(()=>{})}
   if(!window.supabase)return;
   sb=window.supabase.createClient(CFG.supabaseUrl,CFG.supabaseKey);
+  try{const q=new URLSearchParams(location.search+"&"+location.hash.slice(1));const er=q.get("error_description");if(er){setTimeout(()=>toastSafe("로그인 실패: "+er),800);history.replaceState(null,"",location.pathname)}}catch(_){}
   const {data}=await sb.auth.getSession();session=data.session;
   sb.auth.onAuthStateChange((_e,s)=>{const was=session&&session.user.id;session=s;userUi();if(s&&s.user.id!==was){ready.then(pull)}});
   userUi();
@@ -679,6 +687,8 @@ function userUi(){
     B.innerHTML=`<div class="uhead"><div class="uav">${ic("user")}</div><h3>이 브라우저에 저장 중</h3><p>지금은 기록이 이 브라우저에만 저장돼요.<br>로그인 기능은 <b>설명서.txt 3단계</b>(Supabase 연결)를 하면 켜져요.</p></div>`+backup;
   }else if(!session){
     B.innerHTML=`<div class="uhead"><div class="uav big">${AV&&AV["치이카와"]?`<img src="${AV["치이카와"]}" alt="">`:ic("user")}</div><h3>치이카와 위시 도감</h3><p>로그인하면 폰·PC 어디서든<br>내 위시·토벌 기록을 같이 볼 수 있어요.</p></div>
+      <div class="ubox"><button type="button" class="gbtn" id="uGoogle"><svg viewBox="0 0 48 48" width="22" height="22" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>Google로 로그인</button></div>
+      <div class="uor"><span>또는 이메일로</span></div>
       <form class="ubox" id="uForm"><input id="uEmail" type="email" placeholder="이메일" required autocomplete="email"><input id="uPw" type="password" placeholder="비밀번호 (6자 이상)" required minlength="6" autocomplete="current-password">
       <p class="uerr" id="uErr" hidden></p>
       <div class="ubtns"><button type="submit" class="ubtn">로그인</button><button type="button" class="ubtn ghost" id="uSignup">회원가입</button></div>
@@ -692,6 +702,7 @@ function openUser(){$u("uOverlay").hidden=false;userUi()}
 document.addEventListener("click",async e=>{
   const t=e.target;
   if(t.closest("#userBtn"))return openUser();
+  if(t.closest("#uGoogle")){const {error}=await sb.auth.signInWithOAuth({provider:"google",options:{redirectTo:location.origin+location.pathname}});if(error)toastSafe("구글 로그인을 시작하지 못했어요: "+error.message);return}
   if(t.closest("#uLater")){$u("uOverlay").hidden=true;try{sessionStorage.setItem("dogam-later","1")}catch(_){}return}
   if(t.id==="uOverlay"||t.closest("#uClose")){$u("uOverlay").hidden=true;return}
   if(t.closest("#uSignup")){const em=$u("uEmail").value.trim(),pw=$u("uPw").value;const er=$u("uErr");
@@ -747,7 +758,7 @@ const rankOf=i=>{let r=CAT.rank[i.id];if(!r)r=(i.shop==="일본 공식몰"&&!i.s
 const imgOf=i=>i.photo?(String(i.photo).startsWith("data:")?i.photo:"/_blob/"+i.photo):(i.img||"");
 function imgHtml(i){const src=imgOf(i);if(src)return `<img src="${esc(src)}" alt="" loading="lazy" onerror="this.remove()">`;
   if(i.spr){const g=CAT.grid||10,k=i.spr[1],x=(k%g)*100/(g-1),y=Math.floor(k/g)*100/(g-1);return `<div class="spr" style="background-image:url(sp/m${+i.spr[0]}.jpg);background-position:${x}% ${y}%"></div>`}return ""}
-const SERIES=[[/超まじかる|まじかる|マジカル|매지컬/,"매지컬 치이카와"],[/てんし|あくま|堕天|천사♡악마|타락천사/,"천사♡악마"],[/クリニック|클리닉/,"치이카와 클리닉"],[/ちいかわパーク|치이카와 파크/,"치이카와 파크"],[/レストラン|레스토랑/,"치이카와 레스토랑"],[/ベーカリー|베이커리/,"치이카와 베이커리"],[/ラーメン豚|라멘 부타/,"치이카와 라멘 부타"],[/Chiikawa Baby/i,"Chiikawa Baby"],[/ちいかわらんど|치이카와 랜드/,"치이카와 랜드"],[/水族館|수족관/,"치이카와 수족관"],[/ちいかわ寿司|치이카와 스시/,"치이카와 스시"],[/映画ちいかわ|영화 치이카와/,"영화 치이카와"],[/9090/,"치이카와×9090 갸루"],[/PUN。|PUN。/,"PUN。"],[/パジャマパーティ|파자마 파티/,"파자마 파티"],[/シーサーのおみやげやさん|시사의 기념품/,"시사의 기념품 가게"],[/クリスマス|크리스마스/,"크리스마스"],[/サンリオ|산리오/,"치이카와×산리오"],[/썸머/,"치이카와 썸머"],[/페어리/,"페어리"]];
+const SERIES=[[/超まじかる|まじかる|マジカル|매지컬/,"매지컬 치이카와"],[/てんし|あくま|堕天|천사♡악마|타락천사/,"천사♡악마"],[/クリニック|클리닉/,"치이카와 클리닉"],[/ちいかわぽけっと|치이카와 포켓/,"치이카와 포켓"],[/ちいかわパーク|치이카와 파크/,"치이카와 파크"],[/レストラン|레스토랑/,"치이카와 레스토랑"],[/ベーカリー|베이커리/,"치이카와 베이커리"],[/ラーメン豚|라멘 부타/,"치이카와 라멘 부타"],[/Chiikawa Baby/i,"Chiikawa Baby"],[/ちいかわらんど|치이카와 랜드/,"치이카와 랜드"],[/水族館|수족관/,"치이카와 수족관"],[/ちいかわ寿司|치이카와 스시/,"치이카와 스시"],[/映画ちいかわ|영화 치이카와/,"영화 치이카와"],[/9090/,"치이카와×9090 갸루"],[/PUN。|PUN。/,"PUN。"],[/パジャマパーティ|파자마 파티/,"파자마 파티"],[/シーサーのおみやげやさん|시사의 기념품/,"시사의 기념품 가게"],[/クリスマス|크리스마스/,"크리스마스"],[/サンリオ|산리오/,"치이카와×산리오"],[/썸머/,"치이카와 썸머"],[/페어리/,"페어리"]];
 const SER_CACHE=new WeakMap();
 const seriesOf=i=>{if(SER_CACHE.has(i))return SER_CACHE.get(i);const t=(i.nameJa||"")+" "+(i.name||"");let r="";for(const [re,n] of SERIES)if(re.test(t)){r=n;break}SER_CACHE.set(i,r);return r};
 const CH_COLOR={"치이카와":"#f4a7b9","하치와레":"#8bb8e8","우사기":"#f5cf5a","검은별":"#3a3a3c","모몽가":"#b9a3e3","쿠리만쥬":"#c9a27c","랏코":"#9aa5b1","시사":"#f39a4a","후루혼야":"#8e8e93"};
@@ -892,7 +903,17 @@ function listRow(i){
   return `<div class="lrow" data-id="${esc(i.id)}" tabindex="0" role="button" aria-label="${esc(i.name)}"><div class="lth"><div class="art">${imgHtml(i)}</div></div>
     <div class="lt">${stl?`<span class="lst ${i.status}">${stl}</span>`:""}<span class="cn">${rk}${esc(i.name)}</span><span class="cp">${priceHtml(i)}</span>${mktHtml(i)}<span class="cm">${meta}</span></div><div class="qbs">${q}</div></div>`;
 }
-function render(){const m=document.querySelector(".main"),a=m?m.scrollTop:0,b=window.scrollY;_render();renderCart();if(m)m.scrollTop=a;window.scrollTo(0,b)}
+
+/* 카드가 화면에 들어올 때 살짝 떠오르며 등장 (이미 본 카드는 다시 안 움직임) */
+const SEEN=new Set();let revIO=null,revN=0;
+function reveal(){
+  if(!("IntersectionObserver" in window)||matchMedia("(prefers-reduced-motion: reduce)").matches)return;
+  if(!revIO)revIO=new IntersectionObserver(es=>{es.forEach(e=>{if(!e.isIntersecting)return;const el=e.target;revIO.unobserve(el);
+    el.style.transitionDelay=(revN++%8)*45+"ms";requestAnimationFrame(()=>el.classList.add("in"));SEEN.add(el.dataset.id);
+    setTimeout(()=>{el.classList.remove("rv","in");el.style.transitionDelay=""},900)});setTimeout(()=>revN=0,120)},{rootMargin:"0px 0px -30px 0px"});
+  document.querySelectorAll("#list [data-id]").forEach(el=>{if(SEEN.has(el.dataset.id)||el.classList.contains("rv"))return;el.classList.add("rv");revIO.observe(el)});
+}
+function render(){const m=document.querySelector(".main"),a=m?m.scrollTop:0,b=window.scrollY;_render();renderCart();reveal();if(m)m.scrollTop=a;window.scrollTo(0,b)}
 function _render(){
   renderTop();renderFilters();
   const L=$("list");

@@ -30,7 +30,7 @@ def get_json(url,tries=3):
 CH=[("黒い星","검은별"),("ちいかわ","치이카와"),("ハチワレ","하치와레"),("うさぎ","우사기"),("モモンガ","모몽가"),("くりまんじゅう","쿠리만쥬"),("ラッコ","랏코"),
     ("シーサー","시사"),("古本屋","후루혼야"),("あのこ","아노코"),("キメラ","키메라"),("でかつよ","데카츠요"),("ゴブリン","고블린"),("むちゃうマン","무챠우맨"),
     ("オデ","오데"),("カブトムシ","장수풍뎅이"),("鎧さん","갑옷씨")]
-BRAND=re.compile(r"^(ちいかわ|ナガノマーケット|ナガノキャラクターズ|ナガノフレンズ)\s*")
+BRAND=re.compile(r"^(ちいかわぽけっと|ちいかわ|ナガノマーケット|ナガノキャラクターズ|ナガノフレンズ)\s*")
 def chars_of(t):
     core=BRAND.sub("",t)
     paren=" ".join(re.findall(r"[（(]([^）)]*)[）)]",core))
@@ -69,7 +69,8 @@ def cname(h,s,v):
 def colors_of(img_url):
     try:
         from PIL import Image
-        raw=urllib.request.urlopen(urllib.request.Request(img_url.split("?")[0]+"?width=96",headers=UA),timeout=30).read()
+        u=img_url.split("?")[0]+("?width=96" if "shopify" in img_url else "")
+        raw=urllib.request.urlopen(urllib.request.Request(u,headers=UA),timeout=30).read()
         im=Image.open(io.BytesIO(raw)).convert("RGB").resize((48,48))
         cnt={};tot=0
         for r,g,b in list(im.getdata()):
@@ -90,17 +91,19 @@ _gt_fail=[0]
 def translate(t):
     if _gt_fail[0]<5:
         try:
-            s=BRAND.sub(lambda m:"치이카와 " if m.group(1)=="ちいかわ" else ("나가노 캐릭터즈 " if "キャラクターズ" in m.group(1) else ""),t)
+            s=BRAND.sub(lambda m:{"ちいかわ":"치이카와 ","ちいかわぽけっと":"치이카와 포켓 "}.get(m.group(1),"나가노 캐릭터즈 " if "キャラクターズ" in m.group(1) else ""),t)
             for ja,ko in CH: s=s.replace(ja,ko)
             url="https://translate.googleapis.com/translate_a/single?client=gtx&sl=ja&tl=ko&dt=t&q="+urllib.parse.quote(s)
             j=json.load(urllib.request.urlopen(urllib.request.Request(url,headers=UA),timeout=15))
             out="".join(seg[0] for seg in j[0] if seg and seg[0]).strip()
             out=re.sub(r"\s+"," ",out).replace("（","(").replace("）",")")
             if out and not re.search(r"[぀-ヿ]",out):
-                _gt_fail[0]=0;return out
+                _gt_fail[0]=0;return out,"google"
         except Exception:
             _gt_fail[0]+=1
-    return dict_tr(t)
+    core=BRAND.sub("",t);m=BRAND.match(t)
+    pre={"ちいかわぽけっと":"치이카와 포켓 ","ナガノキャラクターズ":"나가노 캐릭터즈 "}.get(m.group(1),"") if m else ""
+    return (pre+dict_tr(core)).strip() if pre else dict_tr(t),"dict"
 
 # ---------- 쇼핑몰 상품 불러오기 ----------
 def all_products(base):
@@ -111,6 +114,23 @@ def all_products(base):
         if not ps: break
         out+=ps;page+=1;time.sleep(.4)
     return out
+POCKET_GQL="https://chiikawa-pocket-goods-store.myshopify.com/api/2024-07/graphql.json"
+POCKET_TOKEN="17dcf71ecda80f11e15d3f99380770d2"   # 치이카와 포켓 스토어 웹사이트가 공개로 쓰는 읽기 전용 키
+def pocket_products():
+    Q="query($c:String){products(first:250,after:$c){edges{node{handle title productType availableForSale publishedAt priceRange{minVariantPrice{amount}} featuredImage{url}}} pageInfo{hasNextPage endCursor}}}"
+    out=[];c=None
+    while True:
+        r=urllib.request.Request(POCKET_GQL,data=json.dumps({"query":Q,"variables":{"c":c}}).encode(),headers={**UA,"Content-Type":"application/json","X-Shopify-Storefront-Access-Token":POCKET_TOKEN})
+        d=json.load(urllib.request.urlopen(r,timeout=40))["data"]["products"]
+        for e in d["edges"]:
+            n=e["node"]
+            out.append({"title":n["title"],"handle":n["handle"],"product_type":n.get("productType") or "","published_at":n.get("publishedAt") or "",
+                "variants":[{"price":n["priceRange"]["minVariantPrice"]["amount"],"available":n["availableForSale"]}],
+                "images":[{"src":n["featuredImage"]["url"]}] if n.get("featuredImage") else []})
+        if not d["pageInfo"]["hasNextPage"]: break
+        c=d["pageInfo"]["endCursor"]
+    return out
+
 def to_item(p,shop,prefix,base):
     t=p["title"];h=p["handle"]
     v=p["variants"][0] if p.get("variants") else {}
@@ -120,17 +140,66 @@ def to_item(p,shop,prefix,base):
     pub=(p.get("published_at") or p.get("created_at") or "")[:10]
     chs=chars_of(t)
     recent=pub and (time.time()-time.mktime(time.strptime(pub,"%Y-%m-%d")))<14*86400
-    return {"id":prefix+h,"name":translate(t),"nameJa":t,"character":chs[0] if chs else "다른 친구들","chars":chs,"series":"",
+    nm,src=translate(t)
+    return {"id":prefix+h,"name":nm,"nameSrc":src,"nameJa":t,"character":chs[0] if chs else "다른 친구들","chars":chs,"series":"",
         "category":cat_of(t,p.get("product_type") or ""),"price":int(float(v.get("price") or 0)),"currency":"JPY","shop":shop,
         "released":pub.replace("-","."),"link":f"{base}/products/{h}","img":img,"colors":[],"memo":"",
         "available":avail,"upcoming":(not avail and bool(recent)),"popRank":9999,"addedAt":TODAY}
+
+def retranslate(added,limit):
+    """사전 번역으로 들어간 이름을 구글 번역으로 다시 다듬기 (되는 날에만)"""
+    todo=[i for i in added if i.get("nameSrc")=="dict"][:limit]
+    if not todo: return
+    nm,src=translate(todo[0]["nameJa"])
+    if src!="google": print("구글 번역 불가 → 이름 다듬기 건너뜀");return
+    todo[0]["name"]=nm;todo[0]["nameSrc"]=src;n=1
+    for it in todo[1:]:
+        nm,src=translate(it["nameJa"])
+        if src!="google": break
+        it["name"]=nm;it["nameSrc"]=src;n+=1;time.sleep(.15)
+    print("이름 다듬기",n,"개")
+
+# ---------- 티몰 치이카와 공식몰 (중치마 트래커 www.chiikawatracker.kr 의 공개 목록, 하루 한 번만 읽음) ----------
+KO_CH=["치이카와","하치와레","우사기","모몽가","쿠리만쥬","랏코","시사","후루혼야","아노코","검은별","키메라","데카츠요","고블린","오데","장수풍뎅이","갑옷씨"]
+JUNK=re.compile(r"(공식\s*)?(순정|정품)|주변기기|주변|공식|생일\s*선물|선물|굿즈|\s{2,}")
+def tm_cat(t):
+    if re.search("手办|摆件|盲盒|figure",t,re.I): return "피규어"
+    if re.search("挂件|挂饰|钥匙扣",t): return "마스코트"
+    if re.search("毛绒|玩偶|公仔|抱枕",t): return "누이"
+    if re.search("徽章|吧唧|胸针",t): return "키링"
+    if re.search("食品|果汁|果冻|糖|零食|饼干|饮料",t): return "기타"
+    if re.search("拖鞋|鞋|T恤|卫衣|袜|帽|包|睡衣|衣",t): return "의류"
+    if re.search("贴纸|文具|笔|本子|笔记|便签|卡片|卡套|明信片|文件|立牌|亚克力",t): return "문구"
+    if re.search("杯|毛巾|手帕|盘|碗|勺|收纳|镜|发|伞|毯|靠垫|保温",t): return "생활"
+    return "기타"
+def tm_label(o):
+    lab=re.sub(r"^.*?/","",o.get("ko") or o.get("name") or "").strip()
+    if re.search("블라인드|랜덤|random|随机",lab,re.I): return "랜덤"
+    return lab[:28]
+def tracker_items(have,status):
+    d=get_json("https://www.chiikawatracker.kr/api/items.php")
+    out=[]
+    for p in d.get("items",[]):
+        title=p.get("title","");base=JUNK.sub(" ",p.get("ko") or "").strip(" ,")
+        many=len(p.get("opts",[]))>1
+        for o in p.get("opts",[]) or [{"sku":p["id"],"in":True,"ko":"","img":p.get("img")}]:
+            iid="tm-"+str(o["sku"]);status[iid]=bool(o.get("in"))
+            if iid in have: continue
+            lab=tm_label(o) if many else ""
+            chs=[c for c in KO_CH if c in lab] or [c for c in KO_CH if c in base] or (["후루혼야"] if "카니" in lab else [])
+            nm=("티몰 "+base+(f" ({lab})" if lab else "")).strip()
+            out.append({"id":iid,"name":nm,"nameSrc":"tracker","nameZh":title,"character":chs[0] if chs else "치이카와","chars":chs,"series":"",
+                "category":tm_cat(title),"price":0,"noPrice":True,"currency":"CNY","shop":"티몰 공식몰",
+                "released":"","link":f"https://detail.tmall.com/item.htm?id={p['id']}&skuId={o['sku']}","img":(o.get("img") or p.get("img") or "").replace("http://","https://"),
+                "colors":[],"memo":"가격은 티몰에서 확인","available":bool(o.get("in")),"upcoming":False,"popRank":9999,"addedAt":TODAY})
+    return out
 
 def update_shops(catalog,extra,added):
     have={i["id"] for i in catalog["items"]}|{d["id"] for d in extra}|{i["id"] for i in added}
     status={}
     new=[]
-    for base,shop,prefix,only_chiikawa in [("https://chiikawamarket.jp","일본 공식몰","jp-",False),("https://nagano-market.jp","나가노 마켓","ng-",True)]:
-        try: ps=all_products(base)
+    for base,shop,prefix,only_chiikawa,all_items in [("https://chiikawamarket.jp","일본 공식몰","jp-",False,True),("https://nagano-market.jp","나가노 마켓","ng-",True,False),("https://chiikawa-pocket-goods-store.com","치이카와 포켓 스토어","pk-",False,True)]:
+        try: ps=pocket_products() if prefix=="pk-" else all_products(base)
         except Exception as e:
             print("상품 목록 실패",base,e);continue
         print(base,len(ps),"개 상품")
@@ -140,11 +209,17 @@ def update_shops(catalog,extra,added):
             status[iid]=avail
             if iid in have: continue
             if only_chiikawa and not any(ja in p["title"] for ja,_ in CH): continue
-            if not avail: continue          # 지금 살 수 있는 것만 새로 추가 (품절 옛날 상품 제외)
+            if not avail and not all_items: continue   # 나가노마켓은 판매중인 것만, 치이카와샵은 전 상품
             if not p.get("images"): continue
             new.append((p,shop,prefix,base))
+    try:
+        tm=tracker_items(have,status);print("티몰 새 상품",len(tm))
+        with cf.ThreadPoolExecutor(8) as ex:
+            for it,cols in zip(tm,ex.map(lambda i:colors_of(i["img"]) if i["img"] else [],tm)): it["colors"]=cols
+        added+=tm
+    except Exception as e: print("티몰 목록 실패",e)
     print("새로 추가할 상품",len(new))
-    with cf.ThreadPoolExecutor(6) as ex:
+    with cf.ThreadPoolExecutor(4) as ex:
         items=list(ex.map(lambda a:to_item(*a),new))
     with cf.ThreadPoolExecutor(8) as ex:
         for it,cols in zip(items,ex.map(lambda i:colors_of(i["img"]),items)): it["colors"]=cols
@@ -222,9 +297,10 @@ def main():
     n=0
     if not os.environ.get("SKIP_SHOP"):
         n=update_shops(catalog,extra,added)
+        retranslate(added,int(os.environ.get("RETRANSLATE_LIMIT","1500")))
         save("catalog.json",catalog);save("added.json",added)
     if not os.environ.get("SKIP_MERCARI"):
-        try: update_market(catalog,added,market,int(os.environ.get("MKT_LIMIT","200")))
+        try: update_market(catalog,added,market,int(os.environ.get("MKT_LIMIT","400")))
         except Exception as e: print("메루카리 갱신 실패",e)
         save("market.json",market)
     save("sync.json",{"lastRun":TODAY,"added":n})
