@@ -447,6 +447,7 @@ h1::after{content:"";display:inline-block;width:.42em;height:.42em;margin-left:.
 /* 등장 애니메이션 */
 #list .rv{opacity:0;transform:translateY(22px) scale(.97)}
 #list .rv.in{opacity:1;transform:none;transition:opacity .5s ease,transform .6s cubic-bezier(.2,.9,.25,1.15)}
+.prem{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;background:#ffe3ec;color:#e0306b;font-size:11.5px;font-weight:700;font-family:var(--round,inherit)}
 </style>
 </head>
 <body>
@@ -551,7 +552,7 @@ h1::after{content:"";display:inline-block;width:.42em;height:.42em;margin-left:.
     <div class="sbody">
       <div class="group" data-sec="cat"><span class="glab">종류</span><div class="pgrid" id="catPills"></div></div>
       <div class="group" data-sec="series"><span class="glab">시리즈</span><div class="pgrid" id="serSeg"></div></div>
-      <div class="group" data-sec="shop"><span class="glab">판매처</span><div class="seg" id="shopSeg" style="grid-auto-flow:row;grid-template-columns:repeat(auto-fit,minmax(110px,1fr))"></div></div>
+      <div class="group" data-sec="shop"><span class="glab">판매처</span><div class="pgrid" id="shopSeg"></div></div>
       <div class="group" data-sec="color"><span class="glab">색</span><div class="list"><div class="chips" id="colorChips"></div></div></div>
     </div>
   </div>
@@ -739,7 +740,7 @@ const CATS=["마스코트","누이","피규어","키링","문구","생활","의�
 const CAT_ALIAS={"인형·마스코트":"마스코트","누이·인형":"누이","키링·뱃지":"키링","생활·잡화":"생활","의류·가방":"의류","식품·과자":"기타","가챠·쿠지":"기타","쿠지·랜덤":"기타"};
 const COLORS=[["핑크","#ff9ec0"],["레드","#ff3b30"],["오렌지","#ff9500"],["옐로","#ffcc00"],["그린","#34c759"],["블루","#5ac8fa"],["네이비","#1d3a8a"],["퍼플","#af52de"],["베이지·브라운","#c9a27c"],["화이트","#ffffff"],["블랙·그레이","#8e8e93"]];
 const TABS=[["all","전체","grid"],["wish","위시","heart"],["bought","토벌","spear"],["pass","참음","shield"]];
-const SORTS=[["pop","인기순"],["rel_new","출시 최신순"],["rel_old","출시 오래된순"],["price","가격 높은순"],["cheap","가격 낮은순"],["new","최근 담은순"]];
+const SORTS=[["pop","인기순 (플미 높은순)"],["rel_new","출시 최신순"],["rel_old","출시 오래된순"],["price","가격 높은순"],["cheap","가격 낮은순"],["new","최근 담은순"]];
 const VIEWS=[["card","card","grid","카드"],["dex","dex","dex","도감"],["list","list","list","리스트"]];
 const RATES={KRW:1,JPY:9.4,CNY:190};
 const $=id=>document.getElementById(id);
@@ -760,7 +761,7 @@ const rankOf=i=>{let r=CAT.rank[i.id];if(!r)r=(i.shop==="일본 공식몰"&&!i.s
 const imgOf=i=>i.photo?(String(i.photo).startsWith("data:")?i.photo:"/_blob/"+i.photo):(i.img||"");
 function imgHtml(i){const src=imgOf(i);if(src)return `<img src="${esc(src)}" alt="" loading="lazy" onerror="this.remove()">`;
   if(i.spr){const g=CAT.grid||10,k=i.spr[1],x=(k%g)*100/(g-1),y=Math.floor(k/g)*100/(g-1);return `<div class="spr" style="background-image:url(sp/m${+i.spr[0]}.jpg);background-position:${x}% ${y}%"></div>`}return ""}
-const SERIES=[[/超まじかる|まじかる|マジカル|매지컬/,"매지컬 치이카와"],[/てんし|あくま|堕天|천사♡악마|타락천사/,"천사♡악마"],[/クリニック|클리닉/,"치이카와 클리닉"],[/ちいかわぽけっと|치이카와 포켓/,"치이카와 포켓"],[/ちいかわパーク|치이카와 파크/,"치이카와 파크"],[/レストラン|레스토랑/,"치이카와 레스토랑"],[/ベーカリー|베이커리/,"치이카와 베이커리"],[/ラーメン豚|라멘 부타/,"치이카와 라멘 부타"],[/Chiikawa Baby/i,"Chiikawa Baby"],[/ちいかわらんど|치이카와 랜드/,"치이카와 랜드"],[/水族館|수족관/,"치이카와 수족관"],[/ちいかわ寿司|치이카와 스시/,"치이카와 스시"],[/映画ちいかわ|영화 치이카와/,"영화 치이카와"],[/9090/,"치이카와×9090 갸루"],[/PUN。|PUN。/,"PUN。"],[/パジャマパーティ|파자마 파티/,"파자마 파티"],[/シーサーのおみやげやさん|시사의 기념품/,"시사의 기념품 가게"],[/クリスマス|크리스마스/,"크리스마스"],[/サンリオ|산리오/,"치이카와×산리오"],[/썸머/,"치이카와 썸머"],[/페어리/,"페어리"]];
+const SERIES=[[/超まじかる|まじかる|マジカル|매지컬/,"매지컬 치이카와"],[/てんし|あくま|堕天|천사♡악마|타락천사/,"천사♡악마"],[/クリニック|클리닉/,"치이카와 클리닉"],[/ちいかわぽけっと|치이카와 포켓/,"치이카와 포켓"],[/ちいかわパーク|치이카와 파크/,"치이카와 파크"],[/レストラン|레스토랑/,"치이카와 레스토랑"],[/ベーカリー|베이커리/,"치이카와 베이커리"],[/ラーメン豚|라멘 부타/,"치이카와 라멘 부타"],[/Chiikawa Baby/i,"Chiikawa Baby"],[/ちいかわらんど|치이카와 랜드/,"치이카와 랜드"],[/水族館|수족관/,"치이카와 수족관"],[/ちいかわ寿司|치이카와 스시/,"치이카와 스시"],[/映画ちいかわ|영화 치이카와/,"인어섬의 비밀 (영화)"],[/9090/,"치이카와×9090 갸루"],[/PUN。|PUN。/,"PUN。"],[/パジャマパーティ|파자마 파티/,"파자마 파티"],[/シーサーのおみやげやさん|시사의 기념품/,"시사의 기념품 가게"],[/クリスマス|크리스마스/,"크리스마스"],[/サンリオ|산리오/,"치이카와×산리오"],[/썸머/,"치이카와 썸머"],[/페어리/,"페어리"]];
 const SER_CACHE=new WeakMap();
 const seriesOf=i=>{if(SER_CACHE.has(i))return SER_CACHE.get(i);if(i.series){SER_CACHE.set(i,i.series);return i.series}const t=(i.nameJa||"")+" "+(i.name||"");let r="";for(const [re,n] of SERIES)if(re.test(t)){r=n;break}SER_CACHE.set(i,r);return r};
 const CH_COLOR={"치이카와":"#f4a7b9","하치와레":"#8bb8e8","우사기":"#f5cf5a","검은별":"#3a3a3c","모몽가":"#b9a3e3","쿠리만쥬":"#c9a27c","랏코":"#9aa5b1","시사":"#f39a4a","후루혼야":"#8e8e93"};
@@ -795,7 +796,9 @@ const shopTag=i=>i.shop==="대원샵"?"대원샵":"";
 let MKT={};
 const soldOut=i=>i.available===false&&!i.upcoming;
 const mkt=i=>soldOut(i)&&MKT[i.id]&&MKT[i.id].p?MKT[i.id]:null;
-const mktHtml=i=>{const m=mkt(i);return m?`<span class="mp" title="메루카리 판매완료 ${m.n}건 기준 (${m.at})">메루카리 시세 ¥${fmt(m.p)}<small>${fmt(m.p*RATES.JPY)}원</small></span>`:""};
+const premOf=i=>{const m=MKT[i.id];if(!m||!m.p||!(m.n>=3)||i.currency!=="JPY"||!(+i.price>0))return 0;return m.p/i.price};
+const premTag=i=>{const r=premOf(i);return r>=1.1?`<span class="prem" title="메루카리 판매완료 시세 ¥${fmt(MKT[i.id].p)} (정가 대비)">플미 +${Math.round((r-1)*100)}%</span>`:""};
+const mktHtml=i=>{const m=mkt(i);if(!m)return premTag(i);return m?`<span class="mp" title="메루카리 판매완료 ${m.n}건 기준 (${m.at})">메루카리 시세 ¥${fmt(m.p)}<small>${fmt(m.p*RATES.JPY)}원</small></span>${premTag(i)}`:""};
 const priceHtml=i=>i.noPrice?`<span style="font-size:14px;color:var(--label2)">정가 없음</span>`:i.currency==="KRW"||!i.currency?`${fmt(i.price||0)}원`:(i.currency==="CNY"?`${(+i.price||0).toLocaleString("ko-KR",{maximumFractionDigits:2})}위안<small>${fmt(krw(i))}원</small>`:`¥${fmt(i.price||0)}<small>${fmt(krw(i))}원</small>`);
 const byStatus=st=>st==="all"?state.items:state.items.filter(i=>i.status===st);
 
@@ -815,7 +818,7 @@ function visible(){
   const a=state.items.filter(i=>match(i));const s=state.sort;
   const rel=(i,d)=>i.released||(d?"0000":"9999");
   const tb=(x,y)=>rel(y,1).localeCompare(rel(x,1))||String(x.id).localeCompare(String(y.id));
-  a.sort((x,y)=>s==="rel_new"?rel(y,1).localeCompare(rel(x,1))||(rankOf(x)-rankOf(y))||tb(x,y):s==="rel_old"?rel(x,0).localeCompare(rel(y,0))||(rankOf(x)-rankOf(y))||tb(x,y):s==="pop"?(rankOf(x)-rankOf(y))||tb(x,y):s==="price"?(krw(y)-krw(x))||tb(x,y):s==="cheap"?(krw(x)-krw(y))||tb(x,y):((y.decidedAt||y.wishedAt||y.createdAt||0)-(x.decidedAt||x.wishedAt||x.createdAt||0))||tb(x,y));
+  a.sort((x,y)=>s==="rel_new"?rel(y,1).localeCompare(rel(x,1))||(rankOf(x)-rankOf(y))||tb(x,y):s==="rel_old"?rel(x,0).localeCompare(rel(y,0))||(rankOf(x)-rankOf(y))||tb(x,y):s==="pop"?(premOf(y)-premOf(x))||(rankOf(x)-rankOf(y))||tb(x,y):s==="price"?(krw(y)-krw(x))||tb(x,y):s==="cheap"?(krw(x)-krw(y))||tb(x,y):((y.decidedAt||y.wishedAt||y.createdAt||0)-(x.decidedAt||x.wishedAt||x.createdAt||0))||tb(x,y));
   return a;
 }
 
@@ -852,7 +855,7 @@ function renderFilters(){
   const act=Object.keys(SECN).filter(k=>state[k]!=="all");
   $("fbar").innerHTML=Object.keys(SECN).map(k=>state[k]!=="all"?`<button type="button" class="fchip on" data-sec="${k}">${esc(state[k])}<span class="x" data-clr="${k}" aria-label="${SECN[k]} 해제">✕</span></button>`:`<button type="button" class="fchip" data-sec="${k}">${SECN[k]}<svg class="cv" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>`).join("")+(act.length>1?`<button type="button" class="fchip rs" data-clr="all">모두 해제</button>`:"");
   const sc=cnt("shop",(i,v)=>(i.shop||"직접 추가")===v);
-  $("shopSeg").innerHTML=[["all","전체"]].concat([...new Set(state.items.map(i=>i.shop).filter(Boolean))].map(x=>[x,x])).map(([k,l])=>`<button type="button" data-v="${k}" aria-pressed="${state.shop===k}">${l} ${sc(k)}</button>`).join("");
+  $("shopSeg").innerHTML=[["all","전체"]].concat([...new Set(state.items.map(i=>i.shop).filter(Boolean))].sort((x,y)=>sc(y)-sc(x)).map(x=>[x,x])).map(([k,l])=>`<button type="button" class="pill" data-v="${esc(k)}" aria-pressed="${state.shop===k}">${esc(l)}<span class="n">${sc(k)}</span></button>`).join("");
   const se=cnt("series",(i,v)=>seriesOf(i)===v);
   const sc2={};state.items.forEach(i=>{const x=seriesOf(i);if(x)(sc2[x]=sc2[x]||[0,0]),sc2[x][0]++,i.status==="bought"&&sc2[x][1]++});
   const sers=Object.keys(sc2).concat(state.series!=="all"&&!sc2[state.series]?[state.series]:[]).sort((x,y)=>(sc2[y]||[0])[0]-(sc2[x]||[0])[0]);
@@ -866,7 +869,7 @@ const soldTag=i=>i.available===false&&i.status==="cand"?(i.upcoming?` · <span c
 const ownBtn=i=>readOnly||i.status==="pass"?"":`<button type="button" class="ob" data-act="own" aria-pressed="${i.status==="bought"}" aria-label="${i.status==="bought"?"토벌 취소":"토벌 완료로 표시"}">${ic("spear")}</button>`;
 const passBtn=i=>readOnly?"":i.status==="pass"?`<button type="button" class="hb pb" data-act="undo" aria-pressed="true" aria-label="참음 취소" title="참음 취소">${ic("shield")}</button>`:(i.status==="wish"&&state.status==="wish")?`<button type="button" class="hb pb" data-act="pass" aria-pressed="false" aria-label="참음" title="참음">${ic("shield")}</button>`:"";
 const mkLinks=i=>{const lh=i.link&&safeUrl(i.link);const jq=i.nameJa?mercariQ(i.nameJa):"";
-  const a=lh?`<a class="ab go" href="${esc(lh)}" target="_blank" rel="noopener">공식홈</a>`:"";
+  const a=lh?`<a class="ab go" href="${esc(lh)}" target="_blank" rel="noopener">${esc(i.linkLabel||"공식홈")}</a>`:"";
   const m=jq?`<a class="ab go mk" href="https://jp.mercari.com/search?keyword=${encodeURIComponent(jq)}" target="_blank" rel="noopener">메루카리</a>`:`<a class="ab go mk" href="https://m.bunjang.co.kr/search/products?q=${encodeURIComponent(bunjangQ(i))}" target="_blank" rel="noopener">번개장터</a>`;
   const c=readOnly||i.status==="bought"||i.status==="pass"?"":`<button type="button" class="ab cb2" data-act="cart" aria-pressed="${!!i.cart}" aria-label="${i.cart?"장바구니에서 빼기":"장바구니에 담기"}" title="${i.cart?"장바구니에서 빼기":"장바구니에 담기"}">${ic("cart","i sm")}</button>`;
   return a+m+c};

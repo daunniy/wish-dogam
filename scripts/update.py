@@ -109,6 +109,7 @@ def translate(t):
 FAN={"라코":"랏코","토끼":"우사기","가르마":"하치와레","하늘다람쥐":"모몽가","헌책방":"후루혼야","밤만쥬":"쿠리만쥬","해달":"랏코","그 녀석":"아노코","갑옷상":"갑옷씨","검은 별":"검은별"}
 def ko_clean(t):
     t=re.sub(r"【[^】]*】","",t).strip()
+    t=re.sub(r"^\s*(\[(예약|사전 ?주문|추첨 ?판매|予約|재입고|입고 예정)[^\]]*\]\s*)+","",t)
     t=t.replace('영화 "치이카와"',"영화 치이카와").replace("영화 「치이카와」","영화 치이카와")
     t=re.sub(r"^Nagano Characters\s*","나가노 캐릭터즈 ",t)
     t=re.sub(r"^(Nagano Market|나가노 마켓)\s*","",t)
@@ -324,7 +325,7 @@ SERIES_COLL=[("chiikawaclinic","치이카와 클리닉"),("ana","치이카와×A
  ("tokyochiikawa","도쿄 치이카와"),("goharajuku","Go!HARAJUKU"),("chiikawababy","Chiikawa Baby"),("tenshitoakuma","천사♡악마"),("parallelworld","치이카와 평행 세계!?"),
  ("chiikawabakery","치이카와 베이커리"),("chiikawa-sushi","치이카와 스시"),("shisamatsuri","시사 축제 & 시사 기념품"),("ramenbuta","치이카와 라멘 부타"),
  ("magicalchiikawa","매지컬 치이카와"),("chiikawarestaurant","치이카와 레스토랑"),("suizokukan","치이카와 수족관"),("sanriocharacters","치이카와×산리오"),
- ("wakuwakuyuenchi","두근두근 유원지"),("chiikawahanten","치이카와 반점"),("chiikawaland","치이카와 랜드"),("chiikawamovie","영화 치이카와 「인어섬의 비밀」"),
+ ("wakuwakuyuenchi","두근두근 유원지"),("chiikawahanten","치이카와 반점"),("chiikawaland","치이카와 랜드"),("chiikawamovie","인어섬의 비밀 (영화)"),
  ("chiikawapark","치이카와 파크"),("anime-chiikawa","애니 치이카와"),("tokyomiyage","치이카와 도쿄 기념품")]
 def update_series(lists):
     m={}
