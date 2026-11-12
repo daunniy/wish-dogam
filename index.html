@@ -102,7 +102,7 @@ h1{font-size:34px;font-weight:700;letter-spacing:-.02em;margin:0;line-height:1.1
 .card{background:var(--card);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;min-width:0;box-shadow:var(--shadow);cursor:pointer;text-align:left}
 .card.dim{opacity:.62}
 .ph{aspect-ratio:1/1;max-width:100%;background:var(--photo);position:relative;display:grid;place-items:center}
-.ph img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;padding:5%}
+.ph img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;padding:5%;background:#fff}
 .ph .mono{font-size:28px;font-weight:700;color:#c7c7cc}
 .cat{position:absolute;top:8px;left:8px;height:22px;padding:0 8px;border-radius:11px;background:rgba(0,0,0,.05);color:#3a3a3c;font-size:11px;font-weight:600;display:flex;align-items:center}
 .st{position:absolute;top:8px;right:8px;height:24px;padding:0 8px;border-radius:12px;display:flex;align-items:center;gap:3px;font-size:12px;font-weight:700;background:rgba(255,255,255,.94);color:#1c1c1e;box-shadow:0 1px 3px rgba(0,0,0,.12)}
@@ -143,7 +143,7 @@ h1{font-size:34px;font-weight:700;letter-spacing:-.02em;margin:0;line-height:1.1
 .sortwrap{display:inline-flex;align-items:center;gap:4px;color:var(--tint);font-weight:600;font-size:14px;min-width:0}
 .sortwrap select{border:0;background:transparent;color:var(--tint);font-weight:600;font-size:14px;appearance:none;-webkit-appearance:none;outline:none;cursor:pointer;min-width:0}
 .vseg{width:132px;flex:none}.vseg button{display:grid;place-items:center;color:var(--label2)}.vseg button[aria-pressed="true"]{color:var(--label)}
-.art{position:absolute;inset:0}.art img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;padding:5%}
+.art{position:absolute;inset:0}.art img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;padding:5%;background:#fff}
 .dexbar{background:var(--card);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;box-shadow:var(--shadow)}
 .dexbar .t{display:flex;justify-content:space-between;font-size:13px;color:var(--label2);font-variant-numeric:tabular-nums}.dexbar .t b{color:var(--label);font-size:15px}
 .meter{height:8px;border-radius:4px;background:var(--fill);overflow:hidden}.meter i{display:block;height:100%;background:linear-gradient(90deg,var(--tint),#ff8fab);border-radius:4px}
@@ -796,7 +796,7 @@ let MKT={};
 const soldOut=i=>i.available===false&&!i.upcoming;
 const mkt=i=>soldOut(i)&&MKT[i.id]&&MKT[i.id].p?MKT[i.id]:null;
 const mktHtml=i=>{const m=mkt(i);return m?`<span class="mp" title="메루카리 판매완료 ${m.n}건 기준 (${m.at})">메루카리 시세 ¥${fmt(m.p)}<small>${fmt(m.p*RATES.JPY)}원</small></span>`:""};
-const priceHtml=i=>i.noPrice?`<span style="font-size:14px;color:var(--label2)">정가 없음</span>`:i.currency==="KRW"||!i.currency?`${fmt(i.price||0)}원`:`${i.currency==="JPY"?"¥":"元"}${fmt(i.price||0)}<small>${fmt(krw(i))}원</small>`;
+const priceHtml=i=>i.noPrice?`<span style="font-size:14px;color:var(--label2)">정가 없음</span>`:i.currency==="KRW"||!i.currency?`${fmt(i.price||0)}원`:(i.currency==="CNY"?`${(+i.price||0).toLocaleString("ko-KR",{maximumFractionDigits:2})}위안<small>${fmt(krw(i))}원</small>`:`¥${fmt(i.price||0)}<small>${fmt(krw(i))}원</small>`);
 const byStatus=st=>st==="all"?state.items:state.items.filter(i=>i.status===st);
 
 const HAY=new WeakMap(),QN={raw:null,v:""};

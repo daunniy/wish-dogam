@@ -344,10 +344,18 @@ def update_series(lists):
 
 def bundle():
     catalog=load("catalog.json",{"items":[]});added=load("added.json",[])
-    c=dict(catalog);c["items"]=catalog["items"]+added
+    c=dict(catalog)
+    all_raw=catalog["items"]+added
+    all_ids={it["id"] for it in all_raw}
+    seen=set();items=[]
+    for it in all_raw:
+        iid=it["id"]
+        if iid in seen or (iid+"-01") in all_ids: continue
+        seen.add(iid);items.append(it)
+    c["items"]=items
     data={"catalog":c,"market":load("market.json",{}),"extra":load("extra.json",[]),"updated":load("sync.json",{}).get("lastRun","")}
     open(D("bundle.js"),"w",encoding="utf-8").write("window.DOGAM_DATA="+json.dumps(data,ensure_ascii=False,separators=(",",":"))+";\n")
-    print("bundle.js 작성",os.path.getsize(D("bundle.js"))//1024,"KB")
+    print("bundle.js 작성",os.path.getsize(D("bundle.js"))//1024,"KB",len(items),"개")
 
 def main():
     if "--bundle-only" in sys.argv: return bundle()
