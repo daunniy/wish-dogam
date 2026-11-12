@@ -105,6 +105,39 @@ def translate(t):
     pre={"ちいかわぽけっと":"치이카와 포켓 ","ナガノキャラクターズ":"나가노 캐릭터즈 "}.get(m.group(1),"") if m else ""
     return (pre+dict_tr(core)).strip() if pre else dict_tr(t),"dict"
 
+# ---------- 공식 한국어 이름 (치이카와샵·나가노마켓 /ko 페이지) ----------
+FAN={"라코":"랏코","토끼":"우사기","가르마":"하치와레","하늘다람쥐":"모몽가","헌책방":"후루혼야","밤만쥬":"쿠리만쥬","해달":"랏코","그 녀석":"아노코","갑옷상":"갑옷씨","검은 별":"검은별"}
+def ko_clean(t):
+    t=re.sub(r"【[^】]*】","",t).strip()
+    t=t.replace('영화 "치이카와"',"영화 치이카와").replace("영화 「치이카와」","영화 치이카와")
+    t=re.sub(r"^Nagano Characters\s*","나가노 캐릭터즈 ",t)
+    t=re.sub(r"^(Nagano Market|나가노 마켓)\s*","",t)
+    t=re.sub(r"^치이카와\s+(?=치이카와|영화 치이카와|애니메이션|애니\s)","",t)
+    t=re.sub(r"치이카와(레스토랑|파크|클리닉|베이커리|랜드|반점)",r"치이카와 \1",t)
+    for a,b in FAN.items(): t=re.sub(r"(?<![가-힣])"+a+r"(?=$|[^가-힣]|의|가|를|은|는|와|과|도|랑)",b,t)
+    t=re.sub(r"(?<![가-힣장수])풍뎅이(?=$|[^가-힣]|의)","장수풍뎅이",t)
+    return re.sub(r"\s+"," ",t).strip()
+def ko_titles(base):
+    m={};page=1
+    while True:
+        try: d=get_json(f"{base}/ko/products.json?limit=250&page={page}")
+        except Exception as e:
+            print("한국어 이름 실패",base,e);break
+        ps=d.get("products",[])
+        if not ps: break
+        for x in ps: m[x["handle"]]=ko_clean(x["title"])
+        page+=1;time.sleep(.3)
+    return m
+def apply_official_names(lists,maps):
+    n=0
+    for L in lists:
+        for it in L:
+            if it.get("nameSrc")=="user": continue
+            pre,_,h=it["id"].partition("-")
+            nm=maps.get(pre,{}).get(h)
+            if nm and it.get("name")!=nm: it["name"]=nm;it["nameSrc"]="official";n+=1
+    print("공식 한국어 이름 적용",n,"개")
+
 # ---------- 쇼핑몰 상품 불러오기 ----------
 def all_products(base):
     out=[];page=1
@@ -289,7 +322,7 @@ SERIES_COLL=[("chiikawaclinic","치이카와 클리닉"),("ana","치이카와×A
  ("tokyochiikawa","도쿄 치이카와"),("goharajuku","Go!HARAJUKU"),("chiikawababy","Chiikawa Baby"),("tenshitoakuma","천사♡악마"),("parallelworld","치이카와 평행 세계!?"),
  ("chiikawabakery","치이카와 베이커리"),("chiikawa-sushi","치이카와 스시"),("shisamatsuri","시사 축제 & 시사 기념품"),("ramenbuta","치이카와 라멘 부타"),
  ("magicalchiikawa","매지컬 치이카와"),("chiikawarestaurant","치이카와 레스토랑"),("suizokukan","치이카와 수족관"),("sanriocharacters","치이카와×산리오"),
- ("wakuwakuyuenchi","두근두근 유원지"),("chiikawahanten","치이카와 반점"),("chiikawaland","치이카와 랜드"),("chiikawamovie","영화 치이카와"),
+ ("wakuwakuyuenchi","두근두근 유원지"),("chiikawahanten","치이카와 반점"),("chiikawaland","치이카와 랜드"),("chiikawamovie","영화 치이카와 「인어섬의 비밀」"),
  ("chiikawapark","치이카와 파크"),("anime-chiikawa","애니 치이카와"),("tokyomiyage","치이카와 도쿄 기념품")]
 def update_series(lists):
     m={}
@@ -323,6 +356,8 @@ def main():
     if not os.environ.get("SKIP_SHOP"):
         n=update_shops(catalog,extra,added)
         retranslate(added,int(os.environ.get("RETRANSLATE_LIMIT","1500")))
+        maps={"jp":ko_titles("https://chiikawamarket.jp"),"ng":ko_titles("https://nagano-market.jp")}
+        apply_official_names([catalog["items"],added,extra],maps)
         update_series([catalog["items"],added,extra]);save("extra.json",extra)
         save("catalog.json",catalog);save("added.json",added)
     if not os.environ.get("SKIP_MERCARI"):
