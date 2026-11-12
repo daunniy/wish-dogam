@@ -329,7 +329,7 @@ h1{font-size:34px;font-weight:700;letter-spacing:-.02em;margin:0;line-height:1.1
   --font:"Gowun Dodum","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,sans-serif;--label:#4a3a36;--label2:#8a7a75}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--cream:#1d1719;--dot:rgba(255,138,173,.07);--pink2:#3a2229;--pink3:#2a1c21;--mint:#1b2d25;--lemon:#2e2a1a;--lav:#26213a;--brown:#f3d9d0;--edge:#4a2c36;--label:#fff;--label2:rgba(235,235,245,.6);--tint-soft:#3a2229}}
 :root[data-theme="dark"]{--cream:#1d1719;--dot:rgba(255,138,173,.07);--pink2:#3a2229;--pink3:#2a1c21;--mint:#1b2d25;--lemon:#2e2a1a;--lav:#26213a;--brown:#f3d9d0;--edge:#4a2c36;--label:#fff;--label2:rgba(235,235,245,.6);--tint-soft:#3a2229}
-body{background-color:var(--cream);background-image:radial-gradient(var(--dot) 2.2px,transparent 2.8px);background-size:24px 24px;letter-spacing:0}
+body{background-color:var(--cream);background-image:linear-gradient(180deg,var(--pink3) 0,var(--cream) 420px);background-repeat:no-repeat;letter-spacing:0}
 h1,.brand,.widget .v,.cp,.sitem,.tab,.fchip,.pill,.shead h2,.ghead h2,.pgt > b,.empty h3,.cbig,.csh b,.cline b,.rk,.cat,.fr .nm,.ab{font-family:var(--round);font-weight:400!important;letter-spacing:0}
 h1{color:var(--brown)}
 h1::after{content:"";display:inline-block;width:.42em;height:.42em;margin-left:.25em;vertical-align:.35em;border-radius:50%;background:var(--pink);box-shadow:.55em .1em 0 -.08em #ffd36e}
@@ -760,7 +760,7 @@ function imgHtml(i){const src=imgOf(i);if(src)return `<img src="${esc(src)}" alt
   if(i.spr){const g=CAT.grid||10,k=i.spr[1],x=(k%g)*100/(g-1),y=Math.floor(k/g)*100/(g-1);return `<div class="spr" style="background-image:url(sp/m${+i.spr[0]}.jpg);background-position:${x}% ${y}%"></div>`}return ""}
 const SERIES=[[/超まじかる|まじかる|マジカル|매지컬/,"매지컬 치이카와"],[/てんし|あくま|堕天|천사♡악마|타락천사/,"천사♡악마"],[/クリニック|클리닉/,"치이카와 클리닉"],[/ちいかわぽけっと|치이카와 포켓/,"치이카와 포켓"],[/ちいかわパーク|치이카와 파크/,"치이카와 파크"],[/レストラン|레스토랑/,"치이카와 레스토랑"],[/ベーカリー|베이커리/,"치이카와 베이커리"],[/ラーメン豚|라멘 부타/,"치이카와 라멘 부타"],[/Chiikawa Baby/i,"Chiikawa Baby"],[/ちいかわらんど|치이카와 랜드/,"치이카와 랜드"],[/水族館|수족관/,"치이카와 수족관"],[/ちいかわ寿司|치이카와 스시/,"치이카와 스시"],[/映画ちいかわ|영화 치이카와/,"영화 치이카와"],[/9090/,"치이카와×9090 갸루"],[/PUN。|PUN。/,"PUN。"],[/パジャマパーティ|파자마 파티/,"파자마 파티"],[/シーサーのおみやげやさん|시사의 기념품/,"시사의 기념품 가게"],[/クリスマス|크리스마스/,"크리스마스"],[/サンリオ|산리오/,"치이카와×산리오"],[/썸머/,"치이카와 썸머"],[/페어리/,"페어리"]];
 const SER_CACHE=new WeakMap();
-const seriesOf=i=>{if(SER_CACHE.has(i))return SER_CACHE.get(i);const t=(i.nameJa||"")+" "+(i.name||"");let r="";for(const [re,n] of SERIES)if(re.test(t)){r=n;break}SER_CACHE.set(i,r);return r};
+const seriesOf=i=>{if(SER_CACHE.has(i))return SER_CACHE.get(i);if(i.series){SER_CACHE.set(i,i.series);return i.series}const t=(i.nameJa||"")+" "+(i.name||"");let r="";for(const [re,n] of SERIES)if(re.test(t)){r=n;break}SER_CACHE.set(i,r);return r};
 const CH_COLOR={"치이카와":"#f4a7b9","하치와레":"#8bb8e8","우사기":"#f5cf5a","검은별":"#3a3a3c","모몽가":"#b9a3e3","쿠리만쥬":"#c9a27c","랏코":"#9aa5b1","시사":"#f39a4a","후루혼야":"#8e8e93"};
 const lineKey=i=>{const j=(i.nameJa||"").replace(/【[^】]*】/g,"").trim();if(!/[）)]\s*$/.test(j))return "";return (i.shop||"")+"|"+j.replace(/[（(][^（(）)]*[）)]\s*$/,"").trim()};
 const mercariQ=j=>{let q=j.replace(/【[^】]*】/g,"").replace(/^(ナガノマーケット|ナガノキャラクターズ|ナガノフレンズ)\s*/,"").trim();if(!/ちいかわ/.test(q))q="ちいかわ "+q;return q};
@@ -851,7 +851,7 @@ function renderFilters(){
   $("shopSeg").innerHTML=[["all","전체"]].concat([...new Set(state.items.map(i=>i.shop).filter(Boolean))].map(x=>[x,x])).map(([k,l])=>`<button type="button" data-v="${k}" aria-pressed="${state.shop===k}">${l} ${sc(k)}</button>`).join("");
   const se=cnt("series",(i,v)=>seriesOf(i)===v);
   const sc2={};state.items.forEach(i=>{const x=seriesOf(i);if(x)(sc2[x]=sc2[x]||[0,0]),sc2[x][0]++,i.status==="bought"&&sc2[x][1]++});
-  const sers=SERIES.map(r=>r[1]).filter((x,k,a)=>a.indexOf(x)===k&&(sc2[x]||state.series===x));
+  const sers=Object.keys(sc2).concat(state.series!=="all"&&!sc2[state.series]?[state.series]:[]).sort((x,y)=>(sc2[y]||[0])[0]-(sc2[x]||[0])[0]);
   $("serSeg").innerHTML=[`<button type="button" class="pill" data-v="all" aria-pressed="${state.series==="all"}">모든 시리즈</button>`].concat(sers.map(x=>{const [t,b]=sc2[x]||[0,0];return `<button type="button" class="pill" data-v="${esc(x)}" aria-pressed="${state.series===x}" title="${t}종 중 ${b}종 토벌">${esc(x)}<span class="n">${se(x)}</span>${b?`<span class="pc">${Math.round(b/t*100)||"<1"}%</span>`:""}</button>`})).join("");
   $("sortSel").value=state.sort;
   $("viewSeg").innerHTML=VIEWS.map(([k,,icn,l])=>`<button type="button" data-v="${k}" aria-pressed="${state.view===k}" aria-label="${l} 보기" title="${l}">${ic(icn,"i sm")}</button>`).join("");

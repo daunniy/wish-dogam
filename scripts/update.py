@@ -284,6 +284,31 @@ def update_market(catalog,added,market,limit):
     print("시세 성공",ok,"실패",fail)
     if todo and fail==len(todo): print("※ 메루카리 조회가 전부 실패했어요 (차단됐을 수 있음)")
 
+# ---------- 치이카와샵 시리즈(컬렉션) → 시리즈 이름 ----------
+SERIES_COLL=[("chiikawaclinic","치이카와 클리닉"),("ana","치이카와×ANA"),("suppaiman","치이카와×슷파이만"),("go-ikebukuro-goods","Go!IKEBUKURO"),
+ ("tokyochiikawa","도쿄 치이카와"),("goharajuku","Go!HARAJUKU"),("chiikawababy","Chiikawa Baby"),("tenshitoakuma","천사♡악마"),("parallelworld","치이카와 평행 세계!?"),
+ ("chiikawabakery","치이카와 베이커리"),("chiikawa-sushi","치이카와 스시"),("shisamatsuri","시사 축제 & 시사 기념품"),("ramenbuta","치이카와 라멘 부타"),
+ ("magicalchiikawa","매지컬 치이카와"),("chiikawarestaurant","치이카와 레스토랑"),("suizokukan","치이카와 수족관"),("sanriocharacters","치이카와×산리오"),
+ ("wakuwakuyuenchi","두근두근 유원지"),("chiikawahanten","치이카와 반점"),("chiikawaland","치이카와 랜드"),("chiikawamovie","영화 치이카와"),
+ ("chiikawapark","치이카와 파크"),("anime-chiikawa","애니 치이카와"),("tokyomiyage","치이카와 도쿄 기념품")]
+def update_series(lists):
+    m={}
+    for coll,name in SERIES_COLL:
+        try:
+            p=1
+            while True:
+                d=get_json(f"https://chiikawamarket.jp/collections/{coll}/products.json?limit=250&page={p}").get("products",[])
+                if not d: break
+                for x in d: m.setdefault("jp-"+x["handle"],name)
+                p+=1;time.sleep(.3)
+        except Exception as e: print("시리즈 실패",coll,e)
+    n=0
+    for L in lists:
+        for it in L:
+            nm=m.get(it["id"])
+            if nm and it.get("series")!=nm: it["series"]=nm;n+=1
+    print("시리즈 지정",n,"개")
+
 def bundle():
     catalog=load("catalog.json",{"items":[]});added=load("added.json",[])
     c=dict(catalog);c["items"]=catalog["items"]+added
@@ -298,6 +323,7 @@ def main():
     if not os.environ.get("SKIP_SHOP"):
         n=update_shops(catalog,extra,added)
         retranslate(added,int(os.environ.get("RETRANSLATE_LIMIT","1500")))
+        update_series([catalog["items"],added,extra]);save("extra.json",extra)
         save("catalog.json",catalog);save("added.json",added)
     if not os.environ.get("SKIP_MERCARI"):
         try: update_market(catalog,added,market,int(os.environ.get("MKT_LIMIT","400")))
