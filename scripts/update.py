@@ -228,7 +228,9 @@ def tracker_items(have,status):
     return out
 
 def update_shops(catalog,extra,added):
-    have={i["id"] for i in catalog["items"]}|{d["id"] for d in extra}|{i["id"] for i in added}
+    have={i["id"] for i in catalog["items"]}|{d["id"] for d in extra}|{i["id"] for i in added}|set(load("hidden.json",[]))
+    def _nj(t): return re.sub(r"\s+","",re.sub(r"【[^】]*】","",t or ""))
+    have_names={(i.get("shop"),_nj(i.get("nameJa"))) for i in catalog["items"]+extra+added if i.get("nameJa")}
     status={}
     new=[]
     for base,shop,prefix,only_chiikawa,all_items in [("https://chiikawamarket.jp","일본 공식몰","jp-",False,True),("https://nagano-market.jp","나가노 마켓","ng-",True,False),("https://chiikawa-pocket-goods-store.com","치이카와 포켓 스토어","pk-",False,True)]:
@@ -240,7 +242,7 @@ def update_shops(catalog,extra,added):
             iid=prefix+p["handle"]
             avail=any(x.get("available") for x in p.get("variants",[]))
             status[iid]=avail
-            if iid in have: continue
+            if iid in have or (shop,_nj(p["title"])) in have_names: continue
             if only_chiikawa and not any(ja in p["title"] for ja,_ in CH): continue
             if not avail and not all_items: continue   # 나가노마켓은 판매중인 것만, 치이카와샵은 전 상품
             if not p.get("images"): continue
@@ -344,18 +346,10 @@ def update_series(lists):
 
 def bundle():
     catalog=load("catalog.json",{"items":[]});added=load("added.json",[])
-    c=dict(catalog)
-    all_raw=catalog["items"]+added
-    all_ids={it["id"] for it in all_raw}
-    seen=set();items=[]
-    for it in all_raw:
-        iid=it["id"]
-        if iid in seen or (iid+"-01") in all_ids: continue
-        seen.add(iid);items.append(it)
-    c["items"]=items
+    c=dict(catalog);c["items"]=catalog["items"]+added
     data={"catalog":c,"market":load("market.json",{}),"extra":load("extra.json",[]),"updated":load("sync.json",{}).get("lastRun","")}
     open(D("bundle.js"),"w",encoding="utf-8").write("window.DOGAM_DATA="+json.dumps(data,ensure_ascii=False,separators=(",",":"))+";\n")
-    print("bundle.js 작성",os.path.getsize(D("bundle.js"))//1024,"KB",len(items),"개")
+    print("bundle.js 작성",os.path.getsize(D("bundle.js"))//1024,"KB")
 
 def main():
     if "--bundle-only" in sys.argv: return bundle()
