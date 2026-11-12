@@ -31,7 +31,15 @@ CH=[("黒い星","검은별"),("ちいかわ","치이카와"),("ハチワレ","�
     ("シーサー","시사"),("古本屋","후루혼야"),("あのこ","아노코"),("キメラ","키메라"),("でかつよ","데카츠요"),("ゴブリン","고블린"),("むちゃうマン","무챠우맨"),
     ("オデ","오데"),("カブトムシ","장수풍뎅이"),("鎧さん","갑옷씨")]
 BRAND=re.compile(r"^(ちいかわぽけっと|ちいかわ|ナガノマーケット|ナガノキャラクターズ|ナガノフレンズ)\s*")
-def chars_of(t):
+SERIES_JA=re.compile(r'映画「?ちいかわ」?|アニメ『ちいかわ』|『ちいかわ』|(超)?まじかるちいかわ|東京ちいかわ|ちいかわ(?=[ァ-ヴー一-龥]|らんど|ぽけっと|たち|ず|\s?[Bb]aby|×|\s?x\s)|ちいかわ(?=\s*[A-Za-z])')
+def detect_chars(nj):
+    t=re.sub(r'【[^】]*】','',nj);t=BRAND.sub('',t,1);t=SERIES_JA.sub(' ',t)
+    paren=" ".join(re.findall(r'[（(]([^）)]*)[）)]',t))
+    for src in (paren,t):
+        hits=sorted((src.find(ja),ko) for ja,ko in CH if ja in src)
+        if hits: return [k for _,k in hits]
+    return []
+def chars_of_old(t):
     core=BRAND.sub("",t)
     paren=" ".join(re.findall(r"[（(]([^）)]*)[）)]",core))
     out=[]
@@ -172,10 +180,10 @@ def to_item(p,shop,prefix,base):
     img=p["images"][0]["src"] if p.get("images") else ""
     if img: img=img.split("?")[0]+"?width=480"
     pub=(p.get("published_at") or p.get("created_at") or "")[:10]
-    chs=chars_of(t)
+    chs=detect_chars(t)
     recent=pub and (time.time()-time.mktime(time.strptime(pub,"%Y-%m-%d")))<14*86400
     nm,src=translate(t)
-    return {"id":prefix+h,"name":nm,"nameSrc":src,"nameJa":t,"character":chs[0] if chs else "다른 친구들","chars":chs,"series":"",
+    return {"id":prefix+h,"name":nm,"nameSrc":src,"nameJa":t,"character":chs[0] if chs else ("다른 친구들" if re.search("島二郎|セイレーン|ヒトハ|フタバ|人魚|びんよよ",t) else "모두 함께"),"chars":chs,"series":"",
         "category":cat_of(t,p.get("product_type") or ""),"price":int(float(v.get("price") or 0)),"currency":"JPY","shop":shop,
         "released":pub.replace("-","."),"link":f"{base}/products/{h}","img":img,"colors":[],"memo":"",
         "available":avail,"upcoming":(not avail and bool(recent)),"popRank":9999,"addedAt":TODAY}
