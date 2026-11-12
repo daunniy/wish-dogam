@@ -1,0 +1,66 @@
+치이카와 위시 도감 — 내 웹사이트 버전 설명서
+==============================================
+
+이 폴더로 할 수 있는 것
+- index.html 더블클릭 → 바로 도감이 열려 (기록은 이 브라우저에 저장)
+- GitHub에 올리면 → 내 도감 사이트 주소가 생기고, 매일 자동으로
+    · 일본 공식샵·나가노마켓의 신상 / 도감에 없던 판매중 상품 추가 (첫 실행 때 약 1,000개)
+    · 품절/판매중 상태 갱신
+    · 품절 상품 메루카리 시세 갱신 (하루 200개씩 돌아가며)
+- Supabase 연결하면 → 이메일 로그인. 폰·PC 어디서든 같은 기록, 남친은 자기 계정으로 따로
+
+
+1단계. GitHub에 올리기 (10분)
+-----------------------------
+※ 파일이 250개가 넘어서 웹사이트에 끌어다 놓기로는 안 올라가. 'GitHub Desktop' 앱을 쓰는 게 제일 쉬워.
+
+1. https://github.com 가입
+2. https://desktop.github.com 에서 GitHub Desktop 설치 → 실행 → GitHub 계정으로 로그인
+3. 이 폴더(wish-dogam)를 원하는 곳(예: 문서 폴더)에 압축 풀어두기
+4. GitHub Desktop 메뉴 File → Add local repository → 이 폴더 선택
+   → "This directory does not appear to be a Git repository" 가 뜨면 'create a repository' 클릭 → Create repository
+5. 위쪽 'Publish repository' 클릭
+   → ⚠️ 'Keep this code private' 체크 해제 (무료 계정은 공개 저장소만 사이트로 만들 수 있어)
+   → Publish
+
+2단계. 사이트 켜기 + 자동 업데이트 켜기 (3분)
+--------------------------------------------
+1. 브라우저에서 github.com → 방금 올린 저장소(wish-dogam) 열기
+2. Settings → 왼쪽 Pages → Source(Build and deployment)를 'GitHub Actions' 로 바꾸기
+3. 위쪽 Actions 탭 → 왼쪽 '도감 자동 업데이트' → 오른쪽 'Run workflow' → 초록 버튼 Run workflow
+   (첫 실행은 상품 1,000개를 넣느라 10~20분 걸려)
+4. 끝나면(초록 체크) 내 사이트 주소:  https://내아이디.github.io/wish-dogam/
+   폰에서 이 주소 열고 → 공유 → '홈 화면에 추가' 하면 앱처럼 쓸 수 있어
+
+이후로는 매일 낮 12:43에 알아서 업데이트돼. 바로 하고 싶으면 3번처럼 Run workflow 누르면 돼.
+
+
+3단계. 로그인 켜기 — Supabase (10분, 무료)
+-----------------------------------------
+1. https://supabase.com 가입 → New project
+   (이름 아무거나, Database password 아무거나 기억 안 해도 됨, Region은 Seoul)
+2. 왼쪽 SQL Editor → New query → 이 폴더의 supabase.sql 내용 전체 복사해서 붙여넣기 → Run
+   ('Success' 뜨면 성공)
+3. 왼쪽 아래 Project Settings → API Keys (또는 Data API) 에서 두 가지 복사
+   · Project URL  (https://xxxx.supabase.co)
+   · anon public 키  또는  Publishable key (sb_publishable_ 로 시작)
+   ⚠️ service_role / secret 키는 절대 넣지 마!
+4. 메일 확인 설정 (둘 중 하나)
+   · 간단하게: Authentication → Sign In / Providers → Email → 'Confirm email' 끄기
+   · 메일 확인 쓸 거면: Authentication → URL Configuration → Site URL 에
+     https://내아이디.github.io/wish-dogam/ 넣기
+5. github.com 저장소에서 config.js 클릭 → 연필(✏️) 아이콘 → 따옴표 안에 1번·3번 값 붙여넣기
+   → 오른쪽 위 'Commit changes' → 'Commit changes'
+   (1~2분 뒤 사이트에 자동 반영)
+6. 사이트 열면 로그인 화면이 나와 → 회원가입 → 로그인 → 끝!
+   · 처음 로그인하면 이 브라우저에 있던 기록이 계정으로 합쳐져
+   · 남친도 같은 주소에서 자기 이메일로 가입하면 자기 도감을 따로 써 (기록 안 섞임)
+
+
+궁금할 때
+- 굿즈 목록이 0개로 나와요 → 압축을 다 풀었는지, data 폴더가 index.html 옆에 있는지 확인
+- Actions가 빨간 X로 실패해요 → 실패한 실행을 눌러서 화면 캡처해 Claude한테 보여줘
+- 메루카리 시세가 안 바뀌어요 → 메루카리가 GitHub 서버를 막았을 수 있어 (공식 기능이 아니라서)
+  이 경우 로그에 '메루카리 조회가 전부 실패했어요'가 찍혀. 나머지 기능은 그대로 돌아가
+- 새 상품 이름이 어색해요 → 자동 번역이라 그래. 상품 눌러서 이름 고치면 내 기록에 저장돼
+- 공개 저장소라서 굿즈 목록 파일은 누구나 볼 수 있지만, 내 위시·토벌 기록은 Supabase 계정 안에만 저장돼
