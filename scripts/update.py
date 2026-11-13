@@ -397,7 +397,7 @@ def update_restock(all_items,days=30):
 def bundle():
     catalog=load("catalog.json",{"items":[]});added=load("added.json",[])
     c=dict(catalog);c["items"]=catalog["items"]+added
-    data={"catalog":c,"market":load("market.json",{}),"extra":load("extra.json",[]),"restock":load("restock.json",{"items":[]}),"updated":load("sync.json",{}).get("lastRun","")}
+    data={"catalog":c,"market":load("market.json",{}),"extra":load("extra.json",[]),"restock":load("restock.json",{"items":[]}),"hidden":[h for h in load("hidden.json",[]) if not h.startswith(("tbx-","tm-"))],"updated":load("sync.json",{}).get("lastRun","")}
     open(D("bundle.js"),"w",encoding="utf-8").write("window.DOGAM_DATA="+json.dumps(data,ensure_ascii=False,separators=(",",":"))+";\n")
     print("bundle.js 작성",os.path.getsize(D("bundle.js"))//1024,"KB")
 

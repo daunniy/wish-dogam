@@ -726,6 +726,16 @@ h1::after{display:none!important;content:none!important}
 .msempty{display:flex;flex-direction:column;align-items:center;gap:10px;padding:26px 10px;text-align:center;color:#8c8285;font-size:13.5px}
 .msq{width:60px;height:60px;border-radius:50%;background:var(--pink2);color:var(--tint);display:grid;place-items:center;font-size:26px;font-weight:800}
 @media (max-width:520px){.mshero{padding:14px;gap:12px}.msface{width:60px;height:60px}.mstxt h2{font-size:19px}.dn svg{width:62px;height:62px}.dn b{top:31px;font-size:16px}}
+.est{display:inline-flex;align-items:center;margin-left:6px;font-size:11.5px;font-weight:600;color:#8a6a1e;background:#fbf1d9;border-radius:6px;padding:1px 6px;vertical-align:2px}
+.mkl{display:block;margin-top:4px;font-size:12px;color:#7d7477;font-weight:500}.mkl b{color:#3a3235;font-weight:700}.mkl i{font-style:normal;margin-left:4px;font-weight:700;font-size:11.5px}.mkl i.up{color:#d0583c}.mkl i.dn{color:#3a8fd0}
+.widget .s{white-space:normal!important;overflow:visible!important;text-overflow:clip!important}.mkl i{display:inline-block}
+.serrel .srow{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px}
+.serrel .sc{flex:none;width:92px;display:flex;flex-direction:column;gap:4px;text-align:left}
+.serrel .sc .art{position:relative;width:92px;height:92px;border-radius:12px;background:#fff;border:1px solid var(--edge);display:grid;place-items:center;overflow:hidden}
+.serrel .sc .art img,.serrel .sc .art .spr{width:88%;height:88%;object-fit:contain;position:static}
+.serrel .sc.own .art{border-color:var(--pink);box-shadow:inset 0 0 0 1px var(--pink)}
+.serrel .sn{font-size:11.5px;line-height:1.3;color:#4a4245;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.serrel .sall{align-self:flex-start;font-size:13px}
 </style>
 </head>
 <body>
@@ -793,6 +803,7 @@ h1::after{display:none!important;content:none!important}
       <div class="links" id="fLinks"></div>
       <div class="mkt" id="fMkt"></div>
       <div class="lineup" id="fLineup" hidden></div>
+      <div class="lineup serrel" id="fSeries" hidden></div>
       <div class="group" id="statusGroup"><span class="glab">상태</span><div class="seg" id="fStatus"></div></div>
       <div class="group">
         <div class="list">
@@ -1033,8 +1044,9 @@ const state={items:[],status:"all",cat:"all",color:"all",char:"all",shop:"all",s
 let db=null,assets=null,editing=null,pendingPhoto=null,clearPhoto=false,readOnly=false,formColors=[],formStatus="wish";
 
 try{const s=JSON.parse(localStorage.getItem("wishdogam-ui6")||"{}");for(const k of ["status","cat","color","char","sort","shop","series","view"])if(s[k])state[k]=s[k]}catch(e){}
-const KEEP=new Set();
-function saveUi(){state.limit=120;KEEP.clear();try{localStorage.setItem("wishdogam-ui6",JSON.stringify({status:state.status,cat:state.cat,color:state.color,char:state.char,sort:state.sort,shop:state.shop,series:state.series,view:state.view}))}catch(e){}}
+const KEEP=new Set(),FROZEN=new Map();
+const nk=i=>FROZEN.has(i.id)?FROZEN.get(i.id):(i.decidedAt||i.wishedAt||i.createdAt||0);
+function saveUi(){state.limit=120;KEEP.clear();FROZEN.clear();try{localStorage.setItem("wishdogam-ui6",JSON.stringify({status:state.status,cat:state.cat,color:state.color,char:state.char,sort:state.sort,shop:state.shop,series:state.series,view:state.view}))}catch(e){}}
 if(!TABS.some(t=>t[0]===state.status))state.status="all";
 if(!SORTS.some(t=>t[0]===state.sort))state.sort="rel_new";
 const MAIN_CHARS=["치이카와","하치와레","우사기"];
@@ -1047,22 +1059,48 @@ function imgHtml(i){const src=imgOf(i);if(src)return `<img src="${esc(src)}" alt
   if(i.spr){const g=CAT.grid||10,k=i.spr[1],x=(k%g)*100/(g-1),y=Math.floor(k/g)*100/(g-1);return `<div class="spr" style="background-image:url(sp/m${+i.spr[0]}.jpg);background-position:${x}% ${y}%"></div>`}return ""}
 const SERIES=[[/超まじかる|まじかる|マジカル|매지컬/,"매지컬 치이카와"],[/てんし|あくま|堕天|천사♡악마|타락천사/,"천사♡악마"],[/クリニック|클리닉/,"치이카와 클리닉"],[/ちいかわぽけっと|치이카와 포켓/,"치이카와 포켓"],[/ちいかわパーク|치이카와 파크/,"치이카와 파크"],[/レストラン|레스토랑/,"치이카와 레스토랑"],[/ベーカリー|베이커리/,"치이카와 베이커리"],[/ラーメン豚|라멘 부타/,"치이카와 라멘 부타"],[/Chiikawa Baby/i,"Chiikawa Baby"],[/ちいかわらんど|치이카와 랜드/,"치이카와 랜드"],[/水族館|수족관/,"치이카와 수족관"],[/ちいかわ寿司|치이카와 스시/,"치이카와 스시"],[/映画ちいかわ|영화 치이카와/,"인어섬의 비밀 (영화)"],[/9090/,"치이카와×9090 갸루"],[/PUN。|PUN。/,"PUN。"],[/パジャマパーティ|파자마 파티/,"파자마 파티"],[/シーサーのおみやげやさん|시사의 기념품/,"시사의 기념품 가게"],[/クリスマス|크리스마스/,"크리스마스"],[/サンリオ|산리오/,"치이카와×산리오"],[/썸머/,"치이카와 썸머"],[/페어리/,"페어리"]];
 const SER_CACHE=new WeakMap();
-const seriesOf=i=>{if(SER_CACHE.has(i))return SER_CACHE.get(i);if(i.series){SER_CACHE.set(i,i.series);return i.series}const t=(i.nameJa||"")+" "+(i.name||"");let r="";for(const [re,n] of SERIES)if(re.test(t)){r=n;break}SER_CACHE.set(i,r);return r};
+const seriesOf=i=>{if(SER_CACHE.has(i))return SER_CACHE.get(i);if(i.series){SER_CACHE.set(i,i.series);return i.series}const t=(i.nameJa||"")+" "+(i.name||"");let r="";for(const [re,n] of SERIES)if(re.test(t)){r=n;break}if(!r&&typeof lineKeyKo==="function"){const k=lineKeyKo(i);if(k){if(!SERMAP||SERMAP.n!==state.items.length){SERMAP=new Map();SERMAP.n=state.items.length;state.items.forEach(x=>{if(x.series){const kk=lineKeyKo(x);if(kk&&!SERMAP.has(kk))SERMAP.set(kk,x.series)}})}r=SERMAP.get(k)||""}}SER_CACHE.set(i,r);return r};let SERMAP=null;
 const CH_COLOR={"치이카와":"#f4a7b9","하치와레":"#8bb8e8","우사기":"#f5cf5a","검은별":"#3a3a3c","모몽가":"#b9a3e3","쿠리만쥬":"#c9a27c","랏코":"#9aa5b1","시사":"#f39a4a","후루혼야":"#8e8e93"};
 const lineKey=i=>{const j=(i.nameJa||"").replace(/【[^】]*】/g,"").trim();if(!/[）)]\s*$/.test(j))return "";return (i.shop||"")+"|"+j.replace(/[（(][^（(）)]*[）)]\s*$/,"").trim()};
 const mercariQ=j=>{let q=j.replace(/【[^】]*】/g,"").replace(/^(ナガノマーケット|ナガノキャラクターズ|ナガノフレンズ)\s*/,"").trim();if(!/ちいかわ/.test(q))q="ちいかわ "+q;return q};
 const bunjangQ=i=>{let q=(i.name||"").replace(/\s+/g," ").trim();if(!/치이카와/.test(q))q="치이카와 "+q;return q.slice(0,60)};
-function renderLineup(it){const el=$("fLineup");const k=it&&lineKey(it);
-  const a=k?state.items.filter(x=>lineKey(x)===k):[];
+const CHN=["치이카와","하치와레","우사기","모몽가","쿠리만쥬","쿠리만주","시사","랏코","후루혼야","검은별","아노코","키메라","데카츠요","고블린","무챠우맨","오데","장수풍뎅이","갑옷씨","가르마","토끼","하늘다람쥐","밤만쥬","라코","해달","카니"];
+const LK=new WeakMap();
+const lineKeyKo=i=>{if(LK.has(i))return LK.get(i);let n=(i.name||"").replace(/\[[^\]]*\]/g,"");
+  for(let r=0;r<2;r++)n=n.replace(/[（(][^（()）]*[）)]/g,m=>CHN.some(c=>m.includes(c))?" ":m);
+  CHN.forEach(c=>{n=n.split(c).join(" ")});
+  n=n.replace(/기타|한국 한정|중국 한정|대만 한정|홍콩 한정|지역 한정|가챠|경품|단품/g,"").replace(/[\s·・,\-~!]/g,"");
+  const k=n.length>=6?(catOf(i)||"")+"|"+n:"";LK.set(i,k);return k};
+function lineOf(it){const k=lineKey(it),k2=lineKeyKo(it);
+  let a=k?state.items.filter(x=>lineKey(x)===k):[];
+  if(k2){const b=state.items.filter(x=>lineKeyKo(x)===k2);if(b.length<=24){const ids=new Set(a.map(x=>x.id));b.forEach(x=>{if(!ids.has(x.id))a.push(x)})}}
+  if(!a.some(x=>x.id===it.id))a.push(it);return a}
+function renderSeriesRel(it){const el=$("fSeries");if(!el)return;const sn=it&&seriesOf(it);
+  if(!sn){el.hidden=true;el.innerHTML="";return}
+  const line=new Set(lineOf(it).map(x=>x.id));
+  const seen=new Set();const a=state.items.filter(x=>seriesOf(x)===sn&&!line.has(x.id)).filter(x=>{const k=lineKeyKo(x)||x.id;if(seen.has(k))return false;seen.add(k);return true});
+  if(!a.length){el.hidden=true;el.innerHTML="";return}
+  const tot=state.items.filter(x=>seriesOf(x)===sn),b=tot.filter(x=>x.status==="bought").length;
+  el.hidden=false;
+  el.innerHTML=`<div class="lh"><b>같은 시리즈 · ${esc(sn)}</b><span>${tot.length}개 중 ${b}개 토벌</span></div><div class="srow">${a.slice(0,30).map(x=>`<button type="button" class="sc ${x.status==="bought"?"own":""}" data-lid="${esc(x.id)}"><span class="art">${imgHtml(x)}</span><span class="sn">${esc(x.name)}</span></button>`).join("")}</div><button type="button" class="plain-btn sall" data-series="${esc(sn)}">이 시리즈 전체 보기</button>`;
+}
+function renderLineup(it){const el=$("fLineup");renderSeriesRel(it);
+  const a=it?lineOf(it):[];
   if(a.length<2){el.hidden=true;el.innerHTML="";return}
   a.sort((x,y)=>String(x.id).localeCompare(String(y.id)));
   const b=a.filter(x=>x.status==="bought").length;
-  const nm=(it.nameJa||"").replace(/【[^】]*】/g,"").replace(/[（(][^（(）)]*[）)]\s*$/,"").replace(/^ちいかわ\s+/,"").trim();
+  const nm=(it.nameJa||"").replace(/【[^】]*】/g,"").replace(/[（(][^（(）)]*[）)]\s*$/,"").replace(/^ちいかわ\s+/,"").trim()||(it.name||"").replace(/[（(][^（(）)]*[）)]\s*$/,"");
   el.hidden=false;
   el.innerHTML=`<div class="lh"><b>같은 라인업</b><span>${a.length}종 중 ${b}종 토벌</span></div><div class="meter"><i style="width:${b/a.length*100}%"></i></div><div class="lgrid">${a.map(x=>`<button type="button" class="lc ${x.id===it.id?"cur":""} ${x.status==="bought"?"own":""}" data-lid="${esc(x.id)}" style="--cc:${CH_COLOR[x.character]||"#d1d1d6"}"><span class="lb"><span class="art">${imgHtml(x)}</span>${x.status==="bought"?`<span class="lo">${ic("spear","i sm")}</span>`:x.status==="wish"?`<span class="lo w">${ic("heart","i sm")}</span>`:""}</span><span class="ll">${x.id===it.id?"보는 중":esc(x.character||"")}</span></button>`).join("")}</div>`;
 }
-function merge(){const ids=new Set(dbItems.map(i=>i.id));
-  state.items=dbItems.filter(i=>i.status!=="hidden").concat(CAT.items.filter(i=>!ids.has(i.id)).map(i=>({...i,status:"cand",_cat:true})))}
+const DESC=["name","nameJa","img","spr","price","currency","noPrice","priceEst","series","released","category","character","chars","shop","link","linkLabel","available","upcoming","popRank"];
+let CATMAP=null,HID=null;
+function merge(){if(!CATMAP||CATMAP.size!==CAT.items.length)CATMAP=new Map(CAT.items.map(i=>[i.id,i]));
+  if(!HID){try{HID=new Set(((window.DOGAM_DATA||{}).hidden)||[])}catch(e){HID=new Set()}}
+  const ids=new Set(dbItems.map(i=>i.id));
+  const rows=dbItems.filter(i=>i.status!=="hidden"&&!(i.status==="cand"&&HID.has(i.id))).map(i=>{const c=CATMAP.get(i.id);if(!c)return i;const o={...i};
+    DESC.forEach(k=>{if(k in c&&!(k==="img"&&String(i.img||"").startsWith("img/")))o[k]=c[k];else if(k==="link"&&!c.link&&/tobeol\.com/.test(i.link||""))o.link=""});return o});
+  state.items=rows.concat(CAT.items.filter(i=>!ids.has(i.id)).map(i=>({...i,status:"cand",_cat:true})))}
 async function writeItem(it,changes){const ref=db.collection("wishes").doc(it.id);
   if(it._cat){const {_cat,status,...base}=it;await ref.set({...base,status:"cand",createdAt:Date.now(),decidedAt:null,photo:null,...changes})}
   else await ref.update(changes)}
@@ -1083,7 +1121,7 @@ const mkt=i=>soldOut(i)&&MKT[i.id]&&MKT[i.id].p?MKT[i.id]:null;
 const premOf=i=>{const m=MKT[i.id];if(!m||!m.p||!(m.n>=3)||i.currency!=="JPY"||!(+i.price>0))return 0;return m.p/i.price};
 const premTag=i=>{const r=premOf(i);return r>=1.1?`<span class="prem" title="메루카리 판매완료 시세 ¥${fmt(MKT[i.id].p)} (정가 대비)">플미 +${Math.round((r-1)*100)}%</span>`:""};
 const mktHtml=i=>{const m=mkt(i);if(!m)return premTag(i)?`<span class="mrow">${premTag(i)}</span>`:"";return `<span class="mrow"><span class="mp" title="메루카리 판매완료 ${m.n}건 기준 (${m.at})">메루카리 ${fmt(m.p*RATES.JPY)}원<small>¥${fmt(m.p)}</small></span>${premTag(i)}</span>`};
-const priceHtml=i=>{if(i.noPrice)return `<span class="np">가격 정보 없음</span>`;if(i.currency==="KRW"||!i.currency)return `<b class="won">${fmt(i.price||0)}<em>원</em></b>`;
+const priceHtml=i=>{if(i.noPrice)return `<span class="np">가격 정보 없음</span>`;if(i.priceEst)return `<b class="won">${fmt(krw(i))}<em>원</em></b><span class="est" title="정가를 못 찾아서 메루카리 실거래 시세(중간값)로 표시했어요">시세 ¥${fmt(i.price)}</span>`;if(i.currency==="KRW"||!i.currency)return `<b class="won">${fmt(i.price||0)}<em>원</em></b>`;
   const o=i.currency==="CNY"?`${(+i.price||0).toLocaleString("ko-KR",{maximumFractionDigits:2})}위안`:`¥${fmt(i.price||0)}`;
   return `<b class="won">${fmt(krw(i))}<em>원</em></b><span class="orig">${o}</span>`};
 const byStatus=st=>st==="all"?state.items:state.items.filter(i=>i.status===st);
@@ -1100,21 +1138,25 @@ function match(i,skip){
   if(state.q){if(QN.raw!==state.q){QN.raw=state.q;QN.v=state.q.toLowerCase().replace(/\s+/g,"")}if(!hayOf(i).includes(QN.v))return false}
   return true;
 }
-function visible(){
+let VISC=null;
+function visible(){if(VISC&&INR)return VISC;
   const a=state.items.filter(i=>match(i));const s=state.sort;
   const TODAY_S=(()=>{const d=new Date(Date.now()+9*36e5);return d.toISOString().slice(0,10).replace(/-/g,".")})();
   const rel=(i,d)=>(!i.released||i.released>TODAY_S)?(d?"0000":"9999"):i.released;
   const tb=(x,y)=>rel(y,1).localeCompare(rel(x,1))||String(x.id).localeCompare(String(y.id));
-  a.sort((x,y)=>s==="rel_new"?rel(y,1).localeCompare(rel(x,1))||(rankOf(x)-rankOf(y))||tb(x,y):s==="rel_old"?rel(x,0).localeCompare(rel(y,0))||(rankOf(x)-rankOf(y))||tb(x,y):s==="pop"?(premOf(y)-premOf(x))||(rankOf(x)-rankOf(y))||tb(x,y):s==="price"?(krw(y)-krw(x))||tb(x,y):s==="cheap"?(krw(x)-krw(y))||tb(x,y):((y.decidedAt||y.wishedAt||y.createdAt||0)-(x.decidedAt||x.wishedAt||x.createdAt||0))||tb(x,y));
-  return a;
+  a.sort((x,y)=>s==="rel_new"?rel(y,1).localeCompare(rel(x,1))||(rankOf(x)-rankOf(y))||tb(x,y):s==="rel_old"?rel(x,0).localeCompare(rel(y,0))||(rankOf(x)-rankOf(y))||tb(x,y):s==="pop"?(premOf(y)-premOf(x))||(rankOf(x)-rankOf(y))||tb(x,y):s==="price"?(krw(y)-krw(x))||tb(x,y):s==="cheap"?(krw(x)-krw(y))||tb(x,y):((nk(y)-nk(x)))||tb(x,y));
+  if(INR)VISC=a;return a;
 }
 
 function renderTop(){
   const w=byStatus("wish"),p=byStatus("pass"),b=byStatus("bought");
-  $("sWish").textContent=fmt(sum(w))+"원";$("sWishSub").textContent=`${w.length}개`;
-  $("sBought").textContent=fmt(sum(b))+"원";$("sBoughtSub").textContent=`${b.length}개`;
+  const mkw=i=>{const m=(typeof MKT!=="undefined"&&MKT)?MKT[i.id]:null;return m&&m.p&&(m.n||0)>=3&&!i.priceEst?m.p*(RATES.JPY||9.4):krw(i)};
+  const msum=a=>a.reduce((s,i)=>s+mkw(i),0);
+  const mline=(a,lab)=>{if(!a.length)return "";const o=sum(a),m=msum(a),d=o?Math.round((m-o)/o*100):0;return `<span class="mkl">${lab} <b>${fmt(Math.round(m))}원</b>${d?`<i class="${d>0?"up":"dn"}">${d>0?"+":""}${d}%</i>`:""}</span>`};
+  $("sWish").textContent=fmt(sum(w))+"원";$("sWishSub").innerHTML=`정가 · ${w.length}개${mline(w,"시세")}`;
+  $("sBought").textContent=fmt(sum(b))+"원";$("sBoughtSub").innerHTML=`정가 · ${b.length}개${mline(b,"시세")}`;
   $("sSaved").textContent=fmt(sum(p))+"원";
-  const dec=p.length+b.length;$("sSavedSub").textContent=`${p.length}개`+(dec?` · 성공률 ${Math.round(p.length/dec*100)}%`:"");
+  const dec=p.length+b.length;$("sSavedSub").innerHTML=`정가 · ${p.length}개`+(dec?` · 성공률 ${Math.round(p.length/dec*100)}%`:"")+mline(p,"시세");
   const t=TABS.find(x=>x[0]===state.status);
   const v=visible();
   $("title").textContent=t[1]+(state.cat!=="all"?` · ${state.cat}`:"");
@@ -1222,7 +1264,7 @@ function reveal(){
   clearTimeout(revSafe);revSafe=setTimeout(()=>{document.querySelectorAll("#list .rv:not(.in)").forEach((el,i)=>{const r=el.getBoundingClientRect();if(r.top<innerHeight&&r.bottom>0){revIO.unobserve(el);revShow(el,i)}})},350);
 }
 addEventListener("scroll",()=>{clearTimeout(revSafe);revSafe=setTimeout(()=>{document.querySelectorAll("#list .rv:not(.in)").forEach((el,i)=>{const r=el.getBoundingClientRect();if(r.top<innerHeight&&r.bottom>0){revIO&&revIO.unobserve(el);revShow(el,i)}})},300)},{passive:true,capture:true});
-function render(){const m=document.querySelector(".main"),a=m?m.scrollTop:0,b=window.scrollY;_render();renderCart();reveal();if(m)m.scrollTop=a;window.scrollTo(0,b)}
+function render(){const m=document.querySelector(".main"),a=m?m.scrollTop:0,b=window.scrollY;VISC=null;INR=true;try{_render()}finally{INR=false;VISC=null}renderCart();reveal();if(m)m.scrollTop=a;window.scrollTo(0,b)}
 function _render(){
   renderTop();renderFilters();
   const L=$("list");
@@ -1439,6 +1481,17 @@ addEventListener("pointermove",e=>{if(!drag)return;e.preventDefault();drag.g.sty
 const endDrag=()=>{if(!drag)return;drag.g.remove();drag.s.classList.remove("hole");drag=null};
 addEventListener("pointerup",endDrag);addEventListener("pointercancel",endDrag);
 
+
+/* 빠른 반영: 누른 카드만 바꾸고 전체 목록은 다시 그리지 않음 */
+let QUIET=0,QUIET_UNTIL=0,INR=false;
+function quick(it){VISC=null;
+  document.querySelectorAll(`#list [data-id="${CSS.escape(it.id)}"]`).forEach(el=>{let h=null;
+    if(el.matches("article.card")){const k=[...el.parentNode.children].indexOf(el);h=card(it,k<0?0:k)}
+    else if(el.matches(".dx"))h=dexCell(it);
+    else if(el.parentNode&&el.parentNode.classList.contains("listv"))h=listRow(it);
+    if(!h)return;const t=document.createElement("template");t.innerHTML=h.trim();const n=t.content.firstElementChild;if(!n)return;n.classList.add("rv","in");el.replaceWith(n)});
+  const pg=document.querySelector("#list .stampcard");if(pg){const t=document.createElement("template");t.innerHTML=pgCard().trim();if(t.content.firstElementChild)pg.replaceWith(t.content.firstElementChild)}
+  requestAnimationFrame(()=>{try{renderTop();renderCart()}catch(e){}})}
 /* 이벤트 */
 function setStatus(s){state.status=s;saveUi();render();try{document.querySelector(".main").scrollTo({top:0});window.scrollTo({top:0})}catch(e){}}
 $("tabs").addEventListener("click",e=>{const b=e.target.closest(".tab");if(b)setStatus(b.dataset.s)});
@@ -1475,19 +1528,19 @@ $("list").addEventListener("click",async e=>{
   const act=b.dataset.act;
   b.disabled=true;
   try{
-    if(act==="heart"){const on=it.status!=="wish";const prev=it.status;KEEP.add(it.id);
+    if(act==="heart"){const on=it.status!=="wish";const prev=it.status;KEEP.add(it.id);if(!FROZEN.has(it.id))FROZEN.set(it.id,it.decidedAt||it.wishedAt||it.createdAt||0);
       const ch=on?{status:"wish",wishedAt:Date.now(),decidedAt:null}:{status:"cand",decidedAt:null};
-      Object.assign(it,ch);render();
+      Object.assign(it,ch);quick(it);QUIET++;QUIET_UNTIL=Date.now()+2500;
       try{await writeItem({...it,status:prev},ch)}catch(err){it.status=prev;render();throw err}
       return}
-    if(act==="cart"){const on=!it.cart;const prev=it.status;KEEP.add(it.id);
+    if(act==="cart"){const on=!it.cart;const prev=it.status;KEEP.add(it.id);if(!FROZEN.has(it.id))FROZEN.set(it.id,it.decidedAt||it.wishedAt||it.createdAt||0);
       const ch=on?{cart:true,cartAt:Date.now()}:{cart:false};
-      Object.assign(it,ch);render();toast(on?"장바구니에 담았어요":"장바구니에서 뺐어요","cart");
+      Object.assign(it,ch);quick(it);QUIET++;QUIET_UNTIL=Date.now()+2500;toast(on?"장바구니에 담았어요":"장바구니에서 뺐어요","cart");
       try{await writeItem({...it,status:prev},ch)}catch(err){it.cart=!on;render();throw err}
       return}
-    if(act==="own"){const on=it.status!=="bought";const prev=it.status;KEEP.add(it.id);
+    if(act==="own"){const on=it.status!=="bought";const prev=it.status;KEEP.add(it.id);if(!FROZEN.has(it.id))FROZEN.set(it.id,it.decidedAt||it.wishedAt||it.createdAt||0);
       const ch=on?{status:"bought",decidedAt:Date.now(),from:prev,cart:false}:{status:it.from==="wish"?"wish":"cand",decidedAt:null};
-      Object.assign(it,ch);render();if(on)toast("토벌 완료!","spear");
+      Object.assign(it,ch);quick(it);QUIET++;QUIET_UNTIL=Date.now()+2500;if(on)toast("토벌 완료!","spear");
       try{await writeItem({...it,status:prev},ch)}catch(err){it.status=prev;render();throw err}
       return}
     if(act==="promote"){await writeItem(it,{status:"wish",wishedAt:Date.now(),decidedAt:null});toast("위시에 담았어요","heart")}
@@ -1542,6 +1595,8 @@ function syncForm(){
   $("fColors").innerHTML=COLORS.map(([n,h])=>`<button type="button" class="chip" data-v="${n}" aria-pressed="${formColors.includes(n)}"><span class="sw" style="background:${h}"></span>${n}</button>`).join("");
 }
 $("fLineup").addEventListener("click",e=>{const b=e.target.closest("[data-lid]");if(!b)return;const x=state.items.find(i=>i.id===b.dataset.lid);if(x){openForm(x);document.querySelector("#overlay .sheet").scrollTo({top:0})}});
+$("fSeries").addEventListener("click",e=>{const s=e.target.closest("[data-series]");if(s){closeForm();state.series=s.dataset.series;state.status="all";saveUi();render();try{document.querySelector(".main").scrollTo({top:0});window.scrollTo({top:0})}catch(_){}return}
+  const b=e.target.closest("[data-lid]");if(!b)return;const x=state.items.find(i=>i.id===b.dataset.lid);if(x){openForm(x);document.querySelector("#overlay .sheet").scrollTo({top:0})}});
 $("fStatus").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;formStatus=b.dataset.v;syncForm()});
 $("fColors").addEventListener("click",e=>{const b=e.target.closest(".chip");if(!b)return;const v=b.dataset.v;formColors=formColors.includes(v)?formColors.filter(x=>x!==v):formColors.concat(v);syncForm()});
 function setHero(src){$("fHero").innerHTML=src?`<img src="${esc(src)}" alt="">`:`<span class="mono">사진 없음</span>`;$("fPhotoClear").hidden=!src||!assets}
@@ -1631,6 +1686,7 @@ rateText();render();
   db.collection("wishes").onSnapshot(snap=>{
     dbItems=snap.docs.map(d=>({id:d.id,...d.data()}));merge();
     if(!snap.metadata.fromCache){clearTimeout(timer);state.error=""}
+    if(state.loaded&&(QUIET>0||Date.now()<QUIET_UNTIL)){if(QUIET>0)QUIET--;return}
     state.loaded=true;render();
   },()=>{clearTimeout(timer);state.error="불러오지 못했어요.";render()});
   db.doc("meta/settings").onSnapshot(s=>{const v=s.exists?s.data():{};if(v.jpyRate>0)RATES.JPY=v.jpyRate;if(v.cnyRate>0)RATES.CNY=v.cnyRate;if(v.rateDate)RATE_DATE=v.rateDate;rateText();render()},()=>{});
