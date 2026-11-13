@@ -5,7 +5,7 @@
 - 끝나면 data/bundle.js 를 다시 만듦
 사용: python scripts/update.py   (환경변수 MKT_LIMIT=200, SKIP_MERCARI=1, SKIP_SHOP=1)
 """
-import json,os,re,sys,time,statistics,urllib.request,urllib.parse,colorsys,io
+import datetime,json,os,re,sys,time,statistics,urllib.request,urllib.parse,colorsys,io
 import concurrent.futures as cf
 ROOT=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0,os.path.join(ROOT,"scripts"))
@@ -223,6 +223,7 @@ def tracker_items(have,status):
     out=[]
     for p in d.get("items",[]):
         title=p.get("title","");base=JUNK.sub(" ",p.get("ko") or "").strip(" ,")
+        if re.search(r"盲盒|随机|全套|套装|블라인드|랜덤|세트",title+" "+(p.get("ko") or "")): continue
         many=len(p.get("opts",[]))>1
         for o in p.get("opts",[]) or [{"sku":p["id"],"in":True,"ko":"","img":p.get("img")}]:
             iid="tm-"+str(o["sku"]);status[iid]=bool(o.get("in"))
@@ -235,6 +236,20 @@ def tracker_items(have,status):
                 "released":"","link":f"https://detail.tmall.com/item.htm?id={p['id']}&skuId={o['sku']}","img":(o.get("img") or p.get("img") or "").replace("http://","https://"),
                 "colors":[],"memo":"가격은 티몰에서 확인","available":bool(o.get("in")),"upcoming":False,"popRank":9999,"addedAt":TODAY})
     return out
+
+SETJ=re.compile(r"全\s*\d+\s*種|コンプ|ランダム|アソート|ブラインド|シークレット含")
+GROUPJ=re.compile(r"みんな|集合|大集合|トリオ|なかまたち|仲間たち|ファミリー")
+def is_set_or_group(title):
+    t=re.sub(r"【[^】]*】","",title or "")
+    if SETJ.search(t): return True
+    par=re.findall(r"[（(]([^）)]*)[）)]",t)
+    if par and not GROUPJ.search(par[-1]):
+        try:
+            if len(detect_chars(par[-1]))==1: return False
+        except Exception: pass
+    if GROUPJ.search(t): return True
+    try: return len(detect_chars(t))>=2 and not re.search(r"(になった|なりきり|な)[ぁ-んァ-ン一-龥]*(ちいかわ|ハチワレ|うさぎ|モモンガ)",t)
+    except Exception: return False
 
 def update_shops(catalog,extra,added):
     have={i["id"] for i in catalog["items"]}|{d["id"] for d in extra}|{i["id"] for i in added}|set(load("hidden.json",[]))
@@ -253,6 +268,7 @@ def update_shops(catalog,extra,added):
             status[iid]=avail
             if iid in have or (shop,_nj(p["title"])) in have_names: continue
             if only_chiikawa and not any(ja in p["title"] for ja,_ in CH): continue
+            if is_set_or_group(p["title"]): continue   # 세트·랜덤·단체 상품은 넣지 않음 (캐릭터별 단품만)
             if not avail and not all_items: continue   # 나가노마켓은 판매중인 것만, 치이카와샵은 전 상품
             if not p.get("images"): continue
             new.append((p,shop,prefix,base))
@@ -353,16 +369,43 @@ def update_series(lists):
             if nm and it.get("series")!=nm: it["series"]=nm;n+=1
     print("시리즈 지정",n,"개")
 
+def update_restock(all_items,days=30):
+    """치이카와샵(일본) 재입고 컬렉션 → data/restock.json"""
+    ids={i["id"] for i in all_items}
+    R=load("restock.json",{"items":[]});by={x["pid"]:x for x in R.get("items",[])}
+    for page in range(1,5):
+        try: d=get_json(f"https://chiikawamarket.jp/ko/collections/restock/products.json?limit=250&page={page}").get("products",[])
+        except Exception as e: print("재입고 불러오기 실패",e);break
+        if not d: break
+        for x in d:
+            at=(x.get("published_at") or "")[:16]
+            m=[]
+            for v in x.get("variants",[]):
+                k=f"jp-{v.get('sku')}"
+                if k in ids: m.append(k)
+                else: m+=[i for i in ids if i.startswith(k+"~")]
+            img=(x.get("images") or [{}])[0].get("src","")
+            e={"pid":x["id"],"handle":x.get("handle",""),"title":ko_clean(x.get("title","")),"at":at,"avail":any(v.get("available") for v in x.get("variants",[])),"ids":sorted(set(m)),"img":img}
+            old=by.get(x["id"])
+            if old and old.get("at")==at: old.update(avail=e["avail"],ids=e["ids"] or old.get("ids",[]),title=e["title"])
+            else: by[x["id"]]=e
+    cut=(datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))-datetime.timedelta(days=days)).strftime("%Y-%m-%dT%H:%M")
+    items=sorted([x for x in by.values() if x.get("at","")>=cut],key=lambda x:x["at"],reverse=True)
+    save("restock.json",{"updated":datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9))).strftime("%Y-%m-%d %H:%M"),"items":items})
+    print("재입고",len(items),"개 (최근",days,"일)")
+
 def bundle():
     catalog=load("catalog.json",{"items":[]});added=load("added.json",[])
     c=dict(catalog);c["items"]=catalog["items"]+added
-    data={"catalog":c,"market":load("market.json",{}),"extra":load("extra.json",[]),"updated":load("sync.json",{}).get("lastRun","")}
+    data={"catalog":c,"market":load("market.json",{}),"extra":load("extra.json",[]),"restock":load("restock.json",{"items":[]}),"updated":load("sync.json",{}).get("lastRun","")}
     open(D("bundle.js"),"w",encoding="utf-8").write("window.DOGAM_DATA="+json.dumps(data,ensure_ascii=False,separators=(",",":"))+";\n")
     print("bundle.js 작성",os.path.getsize(D("bundle.js"))//1024,"KB")
 
 def main():
     if "--bundle-only" in sys.argv: return bundle()
     catalog=load("catalog.json",{"items":[]});extra=load("extra.json",[]);added=load("added.json",[]);market=load("market.json",{})
+    if "--restock" in sys.argv:
+        update_restock(catalog["items"]+added+extra);return bundle()
     n=0
     if not os.environ.get("SKIP_SHOP"):
         n=update_shops(catalog,extra,added)
@@ -375,6 +418,8 @@ def main():
         try: update_market(catalog,added,market,int(os.environ.get("MKT_LIMIT","400")))
         except Exception as e: print("메루카리 갱신 실패",e)
         save("market.json",market)
+    try: update_restock(catalog["items"]+added+extra)
+    except Exception as e: print("재입고 갱신 실패",e)
     save("sync.json",{"lastRun":TODAY,"added":n})
     bundle()
 
