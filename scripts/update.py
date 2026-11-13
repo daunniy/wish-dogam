@@ -394,9 +394,60 @@ def update_restock(all_items,days=30):
     save("restock.json",{"updated":datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9))).strftime("%Y-%m-%d %H:%M"),"items":items})
     print("재입고",len(items),"개 (최근",days,"일)")
 
+# ---------- 자동 시리즈: 쿠지 · 치이카와 포켓 · 할로윈(연도별) ----------
+POCKET_FIX=[("江戸","에도"),("夏마츠리","여름 축제"),("恐竜","공룡"),("오弁当","도시락"),("오店屋산","가게놀이"),("피쿠닛쿠","피크닉"),("千社札風스티커","센자후다풍 스티커"),
+  ("후루츠","과일"),("아리스","앨리스"),("앗수","애쉬"),("코스타","코스터"),("바스타올","목욕 타월"),("오후화이트","오프화이트"),("후리사이즈","프리사이즈")]
+POCKET_THEME=["피크닉","에도","과일","판타지","여름 축제","공룡","앨리스","도시락","가게놀이"]
+KJ_CH=["치이카와","하치와레","우사기","모몽가","쿠리만쥬","쿠리만주","시사","랏코","후루혼야","검은별","가르마","토끼"]
+KJ_RX=re.compile(r"^(.*?)\s*([A-Z]|라스트\s*원)\s*상(?![가-힣])")
+KJ_CHRX=re.compile(r"^(치이카와|하치와레|우사기|모몽가|쿠리만쥬|시사|랏코|후루혼야)\s+([A-Z]|라스트\s*원)\s*상(?![가-힣])")
+KJ_REN={"2023 제일복권":"2023 이치방쿠지","2022 제일복권":"2022 이치방쿠지","아이스크림 제일복권":"아이스크림","아기":"베이비","2023":"2023 이치방쿠지","2022":"2022 이치방쿠지"}
+HW_RX=re.compile(r"할로윈|핼러윈|ハロウィン|仮装")
+def auto_series(items):
+    by_line={}
+    for i in items:
+        iid=i["id"];nm=i.get("name","")
+        if iid.startswith("pk-"):
+            for a,b in POCKET_FIX: nm=nm.replace(a,b)
+            i["name"]=nm
+            th=next((t for t in POCKET_THEME if f"포켓 {t}" in nm),None)
+            if not i.get("series"): i["series"]=f"치이카와 포켓 · {th}" if th else "치이카와 포켓"
+        elif re.search(r"(^|\s)포켓 (피크닉|에도|도시락)",nm) and not i.get("series"):
+            th=re.search(r"포켓 (피크닉|에도|도시락)",nm).group(1);i["series"]=f"치이카와 포켓 · {th}"
+        if not (i.get("series") or "").endswith(("쿠지","이치방쿠지")):
+            m=KJ_RX.search(nm)
+            if m:
+                pfx=m.group(1)
+                for c in KJ_CH: pfx=pfx.replace(c," ")
+                pfx=re.sub(r"먼작귀|이치방쿠지|이치방 쿠지|쿠지|\s+"," ",pfx).strip()
+                if pfx and not pfx.startswith("+"):
+                    pfx=KJ_REN.get(pfx,pfx)
+                    if i.get("shop")!="경품(프라이즈)": i["shop"]="이치방쿠지·쿠지"
+                    i["series"]=f"{pfx} 쿠지" if "이치방쿠지" not in pfx else pfx
+                else:
+                    m2=KJ_CHRX.search(nm)
+                    if m2: i["series"]=f"{m2.group(1)} 쿠지";i["shop"]="이치방쿠지·쿠지"
+    # 할로윈: 발매 연도별
+    def year(i):
+        r=i.get("released") or ""
+        if re.match(r"\d{4}\.(0[6-9]|1[01])",r): return r[:4]
+        m=re.search(r"(20\d\d)",i.get("name","")+" "+(i.get("nameJa") or ""));return m.group(1) if m else ""
+    hw=[i for i in items if HW_RX.search(i.get("name","")+" "+(i.get("nameJa") or ""))]
+    key=lambda i:re.sub(r"[（(][^（）()]*[）)]\s*$","",(i.get("nameJa") or "")).strip()
+    ky={}
+    for i in hw:
+        y=year(i)
+        if y and key(i): ky.setdefault(key(i),y)
+    for i in hw:
+        if i.get("series") and not i["series"].startswith("할로윈"): continue
+        y=year(i) or ky.get(key(i),"")
+        i["series"]=f"할로윈 {y}" if y else "할로윈"
+
 def bundle():
     catalog=load("catalog.json",{"items":[]});added=load("added.json",[])
     c=dict(catalog);c["items"]=catalog["items"]+added
+    try: auto_series(c["items"])
+    except Exception as e: print("자동 시리즈 실패",e)
     data={"catalog":c,"market":load("market.json",{}),"extra":load("extra.json",[]),"restock":load("restock.json",{"items":[]}),"hidden":[h for h in load("hidden.json",[]) if not h.startswith(("tbx-","tm-"))],"updated":load("sync.json",{}).get("lastRun","")}
     open(D("bundle.js"),"w",encoding="utf-8").write("window.DOGAM_DATA="+json.dumps(data,ensure_ascii=False,separators=(",",":"))+";\n")
     print("bundle.js 작성",os.path.getsize(D("bundle.js"))//1024,"KB")

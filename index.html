@@ -1093,14 +1093,16 @@ function renderLineup(it){const el=$("fLineup");renderSeriesRel(it);
   el.hidden=false;
   el.innerHTML=`<div class="lh"><b>같은 라인업</b><span>${a.length}종 중 ${b}종 토벌</span></div><div class="meter"><i style="width:${b/a.length*100}%"></i></div><div class="lgrid">${a.map(x=>`<button type="button" class="lc ${x.id===it.id?"cur":""} ${x.status==="bought"?"own":""}" data-lid="${esc(x.id)}" style="--cc:${CH_COLOR[x.character]||"#d1d1d6"}"><span class="lb"><span class="art">${imgHtml(x)}</span>${x.status==="bought"?`<span class="lo">${ic("spear","i sm")}</span>`:x.status==="wish"?`<span class="lo w">${ic("heart","i sm")}</span>`:""}</span><span class="ll">${x.id===it.id?"보는 중":esc(x.character||"")}</span></button>`).join("")}</div>`;
 }
-const DESC=["name","nameJa","img","spr","price","currency","noPrice","priceEst","series","released","category","character","chars","shop","link","linkLabel","available","upcoming","popRank"];
+const DESC=["name","nameJa","mq","img","spr","price","currency","noPrice","priceEst","series","released","category","character","chars","shop","link","linkLabel","available","upcoming","popRank"];
 let CATMAP=null,HID=null;
 function merge(){if(!CATMAP||CATMAP.size!==CAT.items.length)CATMAP=new Map(CAT.items.map(i=>[i.id,i]));
   if(!HID){try{HID=new Set(((window.DOGAM_DATA||{}).hidden)||[])}catch(e){HID=new Set()}}
   const ids=new Set(dbItems.map(i=>i.id));
   const rows=dbItems.filter(i=>i.status!=="hidden"&&!(i.status==="cand"&&HID.has(i.id))).map(i=>{const c=CATMAP.get(i.id);if(!c)return i;const o={...i};
     DESC.forEach(k=>{if(k in c&&!(k==="img"&&String(i.img||"").startsWith("img/")))o[k]=c[k];else if(k==="link"&&!c.link&&/tobeol\.com/.test(i.link||""))o.link=""});return o});
-  state.items=rows.concat(CAT.items.filter(i=>!ids.has(i.id)).map(i=>({...i,status:"cand",_cat:true})))}
+  state.items=rows.concat(CAT.items.filter(i=>!ids.has(i.id)).map(i=>({...i,status:"cand",_cat:true})));
+  const rd=new Map();state.items.forEach(i=>{if(i.released){const k=lineKeyKo(i);if(k){const o=rd.get(k);if(!o||i.released<o)rd.set(k,i.released)}}});
+  state.items.forEach(i=>{if(!i.released){const k=lineKeyKo(i);if(k&&rd.has(k)){i.released=rd.get(k);i._relGuess=true}}})}
 async function writeItem(it,changes){const ref=db.collection("wishes").doc(it.id);
   if(it._cat){const {_cat,status,...base}=it;await ref.set({...base,status:"cand",createdAt:Date.now(),decidedAt:null,photo:null,...changes})}
   else await ref.update(changes)}
@@ -1127,7 +1129,10 @@ const priceHtml=i=>{if(i.noPrice)return `<span class="np">가격 정보 없음</
 const byStatus=st=>st==="all"?state.items:state.items.filter(i=>i.status===st);
 
 const HAY=new WeakMap(),QN={raw:null,v:""};
-const hayOf=i=>{let h=HAY.get(i);if(h===undefined||h.n!==i.name){h={n:i.name,v:(i.name+(i.nameJa||"")+(i.nameZh||"")+seriesOf(i)+catOf(i)+(i.memo||"")+(i.colors||[]).join("")+(i.character||"")+(i.shop||"")).toLowerCase().replace(/\s+/g,"")};HAY.set(i,h)}return h.v};
+/* 검색 표기 차이 흡수: 야끼=야키, 쿠리만쥬=쿠리만주, 토끼=우사기, 가르마=하치와레 … */
+const SYNS=[["토끼","우사기"],["가르마","하치와레"],["하늘다람쥐","모몽가"],["밤만주","쿠리만주"],["밤만쥬","쿠리만주"],["해달","랏코"],["라코","랏코"],["먼작귀","치이카와"],["농담곰","나가노곰"],["키링","키홀더"],["뱃지","배지"],["봉제인형","인형"],["누이","인형"]];
+const qnorm=t=>{t=t.toLowerCase().replace(/\s+/g,"");SYNS.forEach(([a,b])=>{t=t.split(a).join(b)});return t.replace(/끼/g,"키").replace(/쥬/g,"주").replace(/츄/g,"추").replace(/쮸/g,"추").replace(/[·・\-_()（）\[\]]/g,"")};
+const hayOf=i=>{let h=HAY.get(i);if(h===undefined||h.n!==i.name){h={n:i.name,v:(i.name+(i.nameJa||"")+(i.nameZh||"")+seriesOf(i)+catOf(i)+(i.memo||"")+(i.colors||[]).join("")+(i.character||"")+(i.shop||""))+" "};h.v=qnorm(h.v);HAY.set(i,h)}return h.v};
 function match(i,skip){
   if(state.status!=="all"&&i.status!==state.status&&!KEEP.has(i.id))return false;
   if(skip!=="shop"&&state.shop!=="all"&&(i.shop||"직접 추가")!==state.shop)return false;
@@ -1135,16 +1140,17 @@ function match(i,skip){
   if(skip!=="cat"&&state.cat!=="all"&&catOf(i)!==state.cat)return false;
   if(skip!=="color"&&state.color!=="all"&&!(i.colors||[]).includes(state.color))return false;
   if(skip!=="char"&&state.char!=="all"&&!hasChar(i,state.char))return false;
-  if(state.q){if(QN.raw!==state.q){QN.raw=state.q;QN.v=state.q.toLowerCase().replace(/\s+/g,"")}if(!hayOf(i).includes(QN.v))return false}
+  if(state.q){if(QN.raw!==state.q){QN.raw=state.q;QN.v=state.q.trim().split(/\s+/).map(qnorm).filter(Boolean)}const hv=hayOf(i);if(!QN.v.every(t=>hv.includes(t)))return false}
   return true;
 }
-let VISC=null;
+let VISC=null;const GK=new WeakMap();
 function visible(){if(VISC&&INR)return VISC;
   const a=state.items.filter(i=>match(i));const s=state.sort;
   const TODAY_S=(()=>{const d=new Date(Date.now()+9*36e5);return d.toISOString().slice(0,10).replace(/-/g,".")})();
   const rel=(i,d)=>(!i.released||i.released>TODAY_S)?(d?"0000":"9999"):i.released;
-  const tb=(x,y)=>rel(y,1).localeCompare(rel(x,1))||String(x.id).localeCompare(String(y.id));
-  a.sort((x,y)=>s==="rel_new"?rel(y,1).localeCompare(rel(x,1))||(rankOf(x)-rankOf(y))||tb(x,y):s==="rel_old"?rel(x,0).localeCompare(rel(y,0))||(rankOf(x)-rankOf(y))||tb(x,y):s==="pop"?(premOf(y)-premOf(x))||(rankOf(x)-rankOf(y))||tb(x,y):s==="price"?(krw(y)-krw(x))||tb(x,y):s==="cheap"?(krw(x)-krw(y))||tb(x,y):((nk(y)-nk(x)))||tb(x,y));
+  const gk=i=>{let g=GK.get(i);if(g===undefined){let n=(i.name||"").replace(/[（(][^（()）]*[）)]\s*$/,"").replace(/[（(][^（()）]*[）)]\s*$/,"");CHN.forEach(c=>{n=n.split(c).join("")});g=n.replace(/[\s·・]/g,"")||"~";GK.set(i,g)}return g};const co=i=>{const k=CHARS.indexOf(i.character);return k<0?99:k};
+  const tb=(x,y)=>rel(y,1).localeCompare(rel(x,1))||gk(x).localeCompare(gk(y))||(co(x)-co(y))||String(x.id).localeCompare(String(y.id));
+  a.sort((x,y)=>s==="rel_new"?rel(y,1).localeCompare(rel(x,1))||tb(x,y):s==="rel_old"?rel(x,0).localeCompare(rel(y,0))||tb(x,y):s==="pop"?(premOf(y)-premOf(x))||(rankOf(x)-rankOf(y))||tb(x,y):s==="price"?(krw(y)-krw(x))||tb(x,y):s==="cheap"?(krw(x)-krw(y))||tb(x,y):((nk(y)-nk(x)))||tb(x,y));
   if(INR)VISC=a;return a;
 }
 
@@ -1203,7 +1209,7 @@ const heartBtn=i=>readOnly||!(i.status==="cand"||i.status==="wish")?"":`<button 
 const soldTag=i=>i.available===false&&i.status==="cand"?(i.upcoming?` · <span class="so" style="color:var(--b,#6f9bd1)">판매 예정</span>`:` · <span class="so">품절</span>`):"";
 const ownBtn=i=>readOnly||i.status==="pass"?"":`<button type="button" class="ob" data-act="own" aria-pressed="${i.status==="bought"}" aria-label="${i.status==="bought"?"토벌 취소":"토벌 완료로 표시"}">${ic("spear")}</button>`;
 const passBtn=i=>readOnly?"":i.status==="pass"?`<button type="button" class="hb pb" data-act="undo" aria-pressed="true" aria-label="참음 취소" title="참음 취소">${ic("shield")}</button>`:(i.status==="wish"&&state.status==="wish")?`<button type="button" class="hb pb" data-act="pass" aria-pressed="false" aria-label="참음" title="참음">${ic("shield")}</button>`:"";
-const mkLinks=i=>{const lh=i.link&&safeUrl(i.link);const jq=i.nameJa?mercariQ(i.nameJa):"";
+const mkLinks=i=>{const lh=i.link&&safeUrl(i.link);const jq=i.nameJa?mercariQ(i.nameJa):(i.mq||"");
   const a=lh?`<a class="ab go" href="${esc(lh)}" target="_blank" rel="noopener">${esc(i.linkLabel||"공식홈")}</a>`:"";
   const m=jq?`<a class="ab go mk" href="https://jp.mercari.com/search?keyword=${encodeURIComponent(jq)}" target="_blank" rel="noopener">메루카리</a>`:`<a class="ab go mk" href="https://m.bunjang.co.kr/search/products?q=${encodeURIComponent(bunjangQ(i))}" target="_blank" rel="noopener">번개장터</a>`;
   const c=readOnly||i.status==="bought"||i.status==="pass"?"":`<button type="button" class="ab cb2" data-act="cart" aria-pressed="${!!i.cart}" aria-label="${i.cart?"장바구니에서 빼기":"장바구니에 담기"}" title="${i.cart?"장바구니에서 빼기":"장바구니에 담기"}">${ic("cart","i sm")}</button>`;
@@ -1618,7 +1624,7 @@ function openForm(it){
   $("fHero").innerHTML=(it&&imgHtml(it))||`<span class="mono">사진 없음</span>`;$("fPhotoClear").hidden=!(it&&imgOf(it))||!assets;
   const lh=it?.link&&safeUrl(it.link);
   $("fLinks").innerHTML=(it?.nameJa?`<p class="ja">${esc(it.nameJa)}</p>`:"")+(lh?`<a href="${esc(lh)}" target="_blank" rel="noopener">판매 페이지 열기</a>`:"");
-  const jq=it?.nameJa?mercariQ(it.nameJa):"";
+  const jq=it?.nameJa?mercariQ(it.nameJa):(it?.mq||"");
   const mm=it&&mkt(it);
   $("fMkt").innerHTML=(mm?`<div class="mbox"><b>메루카리 시세 ¥${fmt(mm.p)}</b><span>약 ${fmt(mm.p*RATES.JPY)}원 · 보통 ¥${fmt(mm.lo)}~¥${fmt(mm.hi)}</span><small>최근 판매완료 ${mm.n}건 기준 · ${esc(mm.at)}</small></div>`:"")+(it?((jq?`<a class="mb" href="https://jp.mercari.com/search?keyword=${encodeURIComponent(jq)}" target="_blank" rel="noopener">메루카리에서 찾기${ic("go","i sm")}</a>`:"")+`<a class="mb" href="https://m.bunjang.co.kr/search/products?q=${encodeURIComponent(bunjangQ(it))}" target="_blank" rel="noopener">번개장터에서 찾기${ic("go","i sm")}</a>`):"");
   renderLineup(it);
