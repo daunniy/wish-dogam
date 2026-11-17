@@ -466,9 +466,17 @@ def update_market(catalog,added,extra,market,limit):
     for k in [k for k in market if k not in alive]: del market[k]   # 없어진 상품·검색어를 못 만드는 상품의 시세는 정리
     pool=[i for i in items if i["id"] in alive and i.get("available") is False and not i.get("upcoming")]
     mv=lambda i:market.get(i["id"]) or {}
-    # 순서: ① 예전 방식으로 구해서 화면에 잘못 보일 수 있는 시세 → ② 아직 한 번도 안 구한 것 → ③ 새 방식 중 오래된 것
-    rank=lambda i:0 if (mv(i).get("p") and mv(i).get("v")!=2) else 1 if not mv(i) else 2
-    pool.sort(key=lambda i:(rank(i),mv(i).get("at","0000")))
+    # 순서: ⓪ 직접 지정한 상품(MKT_FIRST) → ① 예전 방식으로 구해서 화면에 잘못 보일 수 있는 시세
+    #       → ② 아직 안 구한 인기 상품 → ③ 아직 안 구한 것 → ④ 새 방식 중 오래된 것
+    first={x.strip() for x in os.environ.get("MKT_FIRST","").split(",") if x.strip()}
+    pop=catalog.get("rank") or {}
+    hot=lambda i:i["id"] in pop or (i.get("popRank") or 9999)<9999
+    def rank(i):
+        if i["id"] in first: return 0
+        if mv(i).get("p") and mv(i).get("v")!=2: return 1
+        if not mv(i): return 2 if hot(i) else 3
+        return 4
+    pool.sort(key=lambda i:(rank(i),pop.get(i["id"],9999),mv(i).get("at","0000")))
     todo=[i for i in pool if mv(i).get("at")!=TODAY][:limit]
     print("메루카리 시세 조회",len(todo),"개")
     ok=fail=0

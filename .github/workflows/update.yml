@@ -5,6 +5,13 @@ on:
     - cron: "43 3 * * *"     # 매일 낮 12:43 (한국 시간) 전체 업데이트
     - cron: "13 9 * * *"     # 매일 저녁 6:13 (한국 시간) 재입고만 확인
   workflow_dispatch:          # Actions 탭에서 'Run workflow'로 바로 실행
+    inputs:
+      mkt_limit:
+        description: "이번에 메루카리 시세를 구할 상품 수 (보통 200)"
+        default: "200"
+      mkt_first:
+        description: "먼저 구할 상품 id (쉼표로 구분, 비워도 됨)"
+        default: ""
   push:
     branches: [main]          # 내가 파일을 고치면 사이트에 바로 반영
 
@@ -35,6 +42,9 @@ jobs:
         run: |
           pip install cryptography pillow
           python scripts/update.py
+        env:
+          MKT_LIMIT: ${{ inputs.mkt_limit || '200' }}
+          MKT_FIRST: ${{ inputs.mkt_first }}
 
       - name: 재입고만 확인 (저녁)
         if: github.event.schedule == '13 9 * * *'
