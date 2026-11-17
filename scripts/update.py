@@ -459,25 +459,6 @@ def mkt_job(it):
     return it["id"],{**base,"p":int(statistics.median(last)),"lo":min(last),"hi":max(last),"r":last,"n":3,
         "m":[[t[2],t[3],t[1]] for t in top]}   # 계산에 쓴 메루카리 매물 (화면에서 직접 확인용)
 
-def _line(i):
-    """같은 라인업(이름이 같고 캐릭터만 다른 상품) 묶음 키"""
-    ja=re.sub(r"【[^】]*】","",i.get("nameJa") or "").strip()
-    return (i.get("shop"),re.sub(r"[（(][^）)]*[）)]\s*$","",ja).strip()) if ja and re.search(r"[（(][^）)]*[）)]\s*$",ja) else None
-def flag_outliers(items,market):
-    """같은 라인업의 다른 캐릭터보다 5배 넘게 비싸면 다른 상품이 잡혔을 가능성이 커서 화면에 안 보이게 표시(chk)"""
-    g={}
-    for i in items:
-        k=_line(i);m=market.get(i["id"]) or {}
-        if k and m.get("v")==2 and m.get("p"): g.setdefault(k,[]).append(i["id"])
-    n=0
-    for ids in g.values():
-        for iid in ids:
-            m=market[iid];others=[market[x]["p"] for x in ids if x!=iid]
-            bad=len(others)>=2 and m["p"]>5*statistics.median(others)
-            if bad and not m.get("chk"): m["chk"]=1;n+=1
-            elif not bad: m.pop("chk",None)
-    print("같은 라인업보다 너무 비싸서 숨긴 시세",n,"개")
-
 def update_market(catalog,added,extra,market,limit):
     items=[dict(i) for i in catalog["items"]+added+extra]
     try: auto_series(items)   # 쿠지 시리즈 이름이 필요해서 (복사본에만 적용)
@@ -508,7 +489,7 @@ def update_market(catalog,added,extra,market,limit):
             else: old["at"]=TODAY;market[iid]=old   # 이번에 3건이 안 모이면 지난번 값 유지
             ok+=1
     print("시세 성공",ok,"실패",fail)
-    flag_outliers(items,market)
+    for m in market.values(): m.pop("chk",None)   # (같은 라인업보다 비싸도 진짜인 경우가 많아서 숨기지 않음 · 근거 매물 링크로 확인)
     if todo and fail==len(todo): print("※ 메루카리 조회가 전부 실패했어요 (차단됐을 수 있음)")
 
 # ---------- 치이카와샵 시리즈(컬렉션) → 시리즈 이름 ----------
