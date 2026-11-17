@@ -1149,12 +1149,14 @@ function renderLineup(it){const el=$("fLineup");renderSeriesRel(it);
   el.innerHTML=`<div class="lh"><b>같은 라인업</b><span>${a.length}종 중 ${b}종 토벌</span></div><div class="meter"><i style="width:${b/a.length*100}%"></i></div><div class="lgrid">${a.map(x=>`<button type="button" class="lc ${x.id===it.id?"cur":""} ${x.status==="bought"?"own":""}" data-lid="${esc(x.id)}" style="--cc:${CH_COLOR[x.character]||"#d1d1d6"}"><span class="lb"><span class="art">${imgHtml(x)}</span>${x.status==="bought"?`<span class="lo">${ic("spear","i sm")}</span>`:x.status==="wish"?`<span class="lo w">${ic("heart","i sm")}</span>`:""}</span><span class="ll">${x.id===it.id?"보는 중":esc(x.character||"")}</span></button>`).join("")}</div>`;
 }
 const DESC=["name","nameJa","img","spr","price","currency","noPrice","priceEst","estKind","series","released","category","character","chars","shop","link","linkLabel","available","upcoming","popRank"];
-let CATMAP=null,HID=null;
+let CATMAP=null,HID=null,EXMAP=null;
+/* extra.json 상품은 처음 한 번만 내 기록에 복사되기 때문에, 화면을 열 때마다 최신 정보(일본어 이름·사진·가격 등)로 다시 맞춤 */
+const exOf=id=>{if(!EXMAP){EXMAP=new Map();try{((window.DOGAM_DATA||{}).extra||[]).forEach(d=>EXMAP.set(d.id,d))}catch(e){}}return EXMAP.get(id)};
 function merge(){if(!CATMAP||CATMAP.size!==CAT.items.length)CATMAP=new Map(CAT.items.map(i=>[i.id,i]));
   if(!HID){try{HID=new Set(((window.DOGAM_DATA||{}).hidden)||[])}catch(e){HID=new Set()}}
   const DUPM=CAT.dup||((window.DOGAM_DATA||{}).dup)||{};const ids=new Set(dbItems.filter(i=>!DUPM[i.id]).map(i=>i.id));const SRC=[];
   dbItems.forEach(i=>{const k=DUPM[i.id];if(!k){SRC.push(i);return}if(ids.has(k)||i.status==="cand"||i.status==="hidden")return;ids.add(k);const c=CATMAP.get(k)||{};SRC.push({...i,...c,id:k,status:i.status,_from:i.id,_cat:true,_keepSt:i.status})});
-  const rows=SRC.filter(i=>i.status!=="hidden"&&!(i.status==="cand"&&HID.has(i.id))).map(i=>{const c=CATMAP.get(i.id);if(!c)return i;const o={...i};
+  const rows=SRC.filter(i=>i.status!=="hidden"&&!(i.status==="cand"&&HID.has(i.id))).map(i=>{const c=CATMAP.get(i.id)||exOf(i.id);if(!c)return i;const o={...i};
     DESC.forEach(k=>{if(k in c&&!(k==="img"&&String(i.img||"").startsWith("img/")))o[k]=c[k];else if(k==="link"&&!c.link&&/tobeol\.com/.test(i.link||""))o.link=""});return o});
   state.items=rows.concat(CAT.items.filter(i=>!ids.has(i.id)).map(i=>({...i,status:"cand",_cat:true})));
   const rd=new Map();state.items.forEach(i=>{if(i.released){const k=lineKeyKo(i);if(k){const o=rd.get(k);if(!o||i.released<o)rd.set(k,i.released)}}});
