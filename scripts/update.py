@@ -6,7 +6,7 @@
 - 끝나면 data/bundle.js 를 다시 만듦
 사용: python scripts/update.py   (환경변수 MKT_LIMIT=200(기본), SKIP_MERCARI=1, SKIP_SHOP=1)
 """
-import datetime,json,os,re,sys,time,statistics,urllib.request,urllib.parse,colorsys,io
+import unicodedata,datetime,json,os,re,sys,time,statistics,urllib.request,urllib.parse,colorsys,io
 import concurrent.futures as cf
 ROOT=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0,os.path.join(ROOT,"scripts"))
@@ -432,7 +432,7 @@ def mk_name(it):
 def mkt_job(it):
     from mercari import search
     P=mk_plan(it)
-    want=P["want"];low=lambda x:norm(x).lower()
+    want=P["want"];low=lambda x:norm(unicodedata.normalize("NFKC",x)).lower()   # 전각 Ｄ賞·ＴＥＥ 등도 같게
     others=[c for c in CHJ if c!="ちいかわ" and c not in P["ctx"] and c not in want]   # 이 상품과 상관없는 다른 캐릭터
     retail=float(it.get("price") or 0) if it.get("currency")=="JPY" else 0
     d=None
@@ -451,12 +451,32 @@ def mkt_job(it):
         try: p=int(x["price"])
         except Exception: continue
         if retail and P["src"]!="collab" and p<retail*MKT_FLOOR: continue   # 9090처럼 이름이 확실한 콜라보는 정가 아래로 팔린 것도 그대로 씀
-        sold.append((int(x.get("updated") or x.get("created") or 0),p))   # updated = 팔린 시각
+        sold.append((int(x.get("updated") or x.get("created") or 0),p,str(x.get("id") or ""),nm[:60]))   # updated = 팔린 시각
     sold.sort(reverse=True)
-    last=[p for _,p in sold[:3]]
+    top=sold[:3];last=[t[1] for t in top]
     base={"at":TODAY,"v":2,"src":P["src"]}
     if len(last)<3: return it["id"],{**base,"n":len(last)}
-    return it["id"],{**base,"p":int(statistics.median(last)),"lo":min(last),"hi":max(last),"r":last,"n":3}
+    return it["id"],{**base,"p":int(statistics.median(last)),"lo":min(last),"hi":max(last),"r":last,"n":3,
+        "m":[[t[2],t[3],t[1]] for t in top]}   # 계산에 쓴 메루카리 매물 (화면에서 직접 확인용)
+
+def _line(i):
+    """같은 라인업(이름이 같고 캐릭터만 다른 상품) 묶음 키"""
+    ja=re.sub(r"【[^】]*】","",i.get("nameJa") or "").strip()
+    return (i.get("shop"),re.sub(r"[（(][^）)]*[）)]\s*$","",ja).strip()) if ja and re.search(r"[（(][^）)]*[）)]\s*$",ja) else None
+def flag_outliers(items,market):
+    """같은 라인업의 다른 캐릭터보다 5배 넘게 비싸면 다른 상품이 잡혔을 가능성이 커서 화면에 안 보이게 표시(chk)"""
+    g={}
+    for i in items:
+        k=_line(i);m=market.get(i["id"]) or {}
+        if k and m.get("v")==2 and m.get("p"): g.setdefault(k,[]).append(i["id"])
+    n=0
+    for ids in g.values():
+        for iid in ids:
+            m=market[iid];others=[market[x]["p"] for x in ids if x!=iid]
+            bad=len(others)>=2 and m["p"]>5*statistics.median(others)
+            if bad and not m.get("chk"): m["chk"]=1;n+=1
+            elif not bad: m.pop("chk",None)
+    print("같은 라인업보다 너무 비싸서 숨긴 시세",n,"개")
 
 def update_market(catalog,added,extra,market,limit):
     items=[dict(i) for i in catalog["items"]+added+extra]
@@ -477,7 +497,7 @@ def update_market(catalog,added,extra,market,limit):
         if not mv(i): return 2 if hot(i) else 3
         return 4
     pool.sort(key=lambda i:(rank(i),pop.get(i["id"],9999),mv(i).get("at","0000")))
-    todo=[i for i in pool if mv(i).get("at")!=TODAY][:limit]
+    todo=[i for i in pool if i["id"] in first or mv(i).get("at")!=TODAY][:limit]   # 직접 지정한 건 오늘 구했어도 다시
     print("메루카리 시세 조회",len(todo),"개")
     ok=fail=0
     with cf.ThreadPoolExecutor(3) as ex:
@@ -488,6 +508,7 @@ def update_market(catalog,added,extra,market,limit):
             else: old["at"]=TODAY;market[iid]=old   # 이번에 3건이 안 모이면 지난번 값 유지
             ok+=1
     print("시세 성공",ok,"실패",fail)
+    flag_outliers(items,market)
     if todo and fail==len(todo): print("※ 메루카리 조회가 전부 실패했어요 (차단됐을 수 있음)")
 
 # ---------- 치이카와샵 시리즈(컬렉션) → 시리즈 이름 ----------
