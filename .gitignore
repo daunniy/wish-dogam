@@ -1,4 +1,7 @@
+# 매 실행마다 다시 만들어지는 파일 (배포할 때 자동 생성)
+data/bundle.js
+data/*.tmp
+
+# 파이썬 캐시 (로컬 실행 시 생성)
 __pycache__/
 *.py[cod]
-*$py.class
-.DS_Store

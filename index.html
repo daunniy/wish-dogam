@@ -10,6 +10,9 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="치이카와 도감">
 <title>치이카와 위시 도감</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <script src="config.js"></script>
 <script src="data/bundle.js"></script>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -878,18 +881,35 @@ const CFG=window.DOGAM_CONFIG||{};
 const LS="wishdogam-store-v2", RATE_LS="wishdogam-rate-v1";
 const hasSB=!!(CFG.supabaseUrl&&CFG.supabaseKey);
 let store=null; // {wishes:{id:doc}}
-try{store=JSON.parse(localStorage.getItem(LS))}catch(e){}
+/* 기록은 IndexedDB 에 저장 (사진까지 넣어도 5MB 한도에 안 걸림). 안 되는 브라우저에서는 예전처럼 localStorage */
+let idb=null,dirty=false;
+const idbOpen=()=>new Promise((ok,no)=>{try{const r=indexedDB.open("wishdogam",1);r.onupgradeneeded=()=>r.result.createObjectStore("kv");r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error);r.onblocked=()=>no(new Error("blocked"))}catch(e){no(e)}});
+const idbGet=k=>new Promise((ok,no)=>{const r=idb.transaction("kv").objectStore("kv").get(k);r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)});
+const idbSet=(k,v)=>new Promise((ok,no)=>{const t=idb.transaction("kv","readwrite");t.objectStore("kv").put(v,k);t.oncomplete=()=>ok();t.onerror=t.onabort=()=>no(t.error)});
+async function loadStore(){
+  let ls=null;try{ls=JSON.parse(localStorage.getItem(LS))}catch(e){}
+  if(!(ls&&ls.wishes))ls=null;
+  try{
+    idb=await idbOpen();const v=await idbGet("store");
+    if(v&&v.wishes){store=v;if(ls)mergeIn(ls.wishes)}else store=ls;
+    if(ls&&store){await idbSet("store",store);try{localStorage.removeItem(LS)}catch(e){}}   // 예전 저장분을 옮김
+    try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist().catch(()=>{})}catch(e){}
+  }catch(e){idb=null;store=ls}
+}
 const subs=new Set();
 let sb=null, session=null, pushT=null, syncState="";
 
-function persist(){try{localStorage.setItem(LS,JSON.stringify(store))}catch(e){toastSafe("브라우저 저장 공간이 꽉 찼어요")}}
+function persist(){
+  if(idb){idbSet("store",store).catch(()=>toastSafe("브라우저 저장 공간이 꽉 찼어요"));return}
+  try{localStorage.setItem(LS,JSON.stringify(store))}catch(e){toastSafe("브라우저 저장 공간이 꽉 찼어요")}}
 function toastSafe(m){try{toast(m)}catch(e){}}
 function snap(){const docs=Object.values(store.wishes).filter(d=>!d._deleted).map(d=>({id:d.id,data:()=>d}));return {docs,metadata:{fromCache:false}}}
 function emit(){const s=snap();subs.forEach(f=>{try{f(s)}catch(e){console.error(e)}})}
-function changed(){persist();emit();schedulePush()}
+function changed(){dirty=true;persist();emit();schedulePush()}
 const genId=()=>"my-"+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 
 async function seed(){
+  await loadStore();
   if(store&&store.wishes)return;
   store={wishes:{}};
   try{((window.DOGAM_DATA||{}).extra||[]).forEach(d=>{store.wishes[d.id]={...d,_t:0}})}catch(e){}
@@ -945,21 +965,44 @@ function mergeIn(remote){
   }
   return n;
 }
-async function pull(){
-  if(!sb||!session)return;
+/* 저장하기 전에 항상 서버 기록을 먼저 받아서 합침 → 폰·PC를 같이 열어 둬도 서로 덮어쓰지 않음 */
+let remoteAt=null,syncing=null,again=false,lastSync=0;
+function sync(force){
+  if(!sb||!session)return Promise.resolve();
+  if(syncing){again=true;return syncing}
+  syncing=(async()=>{try{do{again=false;await syncOnce(force)}while(again&&session)}catch(e){setSync("동기화 실패: "+((e&&e.message)||"연결을 확인해 주세요"))}finally{syncing=null;lastSync=Date.now()}})();
+  return syncing;
+}
+async function syncOnce(force){
+  const uid=session.user.id,mine=()=>session&&session.user.id===uid;
   setSync("동기화 중…");
-  const {data,error}=await sb.from("dogam").select("data").eq("user_id",session.user.id).maybeSingle();
-  if(error){setSync("동기화 실패: "+error.message);return}
-  mergeIn(data&&data.data&&data.data.wishes);
-  persist();emit();
-  await push();
+  const head=await sb.from("dogam").select("updated_at").eq("user_id",uid).maybeSingle();
+  if(!mine())return;
+  if(head.error){setSync("동기화 실패: "+head.error.message);return}
+  const at=head.data?head.data.updated_at:null;
+  let need=dirty||!at;
+  if(at&&(force||at!==remoteAt)){   // 다른 기기에서 바뀐 게 있을 때만 전체를 내려받음
+    const {data,error}=await sb.from("dogam").select("data,updated_at").eq("user_id",uid).maybeSingle();
+    if(!mine())return;
+    if(error){setSync("동기화 실패: "+error.message);return}
+    const rw=(data&&data.data&&data.data.wishes)||{};
+    if(mergeIn(rw)){persist();emit()}
+    for(const [id,d] of Object.entries(store.wishes)){const r=rw[id];if(!r||(d._t||0)>(r._t||0)){need=true;break}}   // 내 쪽이 더 새로운 게 있으면 올림
+    remoteAt=data?data.updated_at:at;
+  }
+  if(need){
+    dirty=false;
+    const {data,error}=await sb.from("dogam").upsert({user_id:uid,data:{wishes:store.wishes},updated_at:new Date().toISOString()}).select("updated_at").maybeSingle();
+    if(error){dirty=true;setSync("저장 실패: "+error.message);return}
+    remoteAt=(data&&data.updated_at)||null;
+  }
+  setSync("계정에 저장됨 · "+new Date().toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"}));
 }
-async function push(){
-  if(!sb||!session)return;
-  const {error}=await sb.from("dogam").upsert({user_id:session.user.id,data:{wishes:store.wishes},updated_at:new Date().toISOString()});
-  setSync(error?"저장 실패: "+error.message:"계정에 저장됨 · "+new Date().toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"}));
-}
-function schedulePush(){if(!session)return;clearTimeout(pushT);setSync("저장 대기 중…");pushT=setTimeout(push,1200)}
+const pull=()=>sync(true);
+function schedulePush(){if(!session)return;clearTimeout(pushT);setSync("저장 대기 중…");pushT=setTimeout(()=>sync(),1200)}
+/* 다른 기기에서 바꾼 기록: 탭으로 돌아오거나 인터넷이 다시 연결되면 받아옴 */
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&session&&Date.now()-lastSync>15000)sync()});
+addEventListener("online",()=>{if(session)sync()});
 function setSync(t){syncState=t;const el=document.getElementById("uSync");if(el)el.textContent=t}
 
 async function initSB(){
@@ -985,8 +1028,8 @@ function userUi(){
     B.innerHTML=`<div class="uhead"><div class="uav">${ic("user")}</div><h3>이 브라우저에 저장 중</h3><p>지금은 기록이 이 브라우저에만 저장돼요.<br>로그인 기능은 <b>설명서.txt 3단계</b>(Supabase 연결)를 하면 켜져요.</p></div>`+backup;
   }else if(!session){
     B.innerHTML=`<div class="uhead"><div class="uav big">${AV&&AV["치이카와"]?`<img src="${AV["치이카와"]}" alt="">`:ic("user")}</div><h3>치이카와 위시 도감</h3><p>로그인하면 폰·PC 어디서든<br>내 위시·토벌 기록을 같이 볼 수 있어요.</p></div>
-      <div class="ubox"><button type="button" class="gbtn" id="uGoogle" style="width:100%"><svg viewBox="0 0 48 48" width="22" height="22" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>Google로 로그인</button><button type="button" class="kbtn" id="uKakao"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="#191919" d="M12 3.5C6.8 3.5 2.6 6.8 2.6 10.9c0 2.6 1.7 4.9 4.3 6.2l-1.1 4c-.1.3.3.6.6.4l4.7-3.1c.3 0 .6.1.9.1 5.2 0 9.4-3.3 9.4-7.5S17.2 3.5 12 3.5z"/></svg>카카오로 로그인</button></div>
-      <div class="uor"><span>또는 이메일로</span></div>
+      ${CFG.google||CFG.kakao?`<div class="ubox">${CFG.google?`<button type="button" class="gbtn" id="uGoogle" style="width:100%"><svg viewBox="0 0 48 48" width="22" height="22" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>Google로 로그인</button>`:""}${CFG.kakao?`<button type="button" class="kbtn" id="uKakao"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="#191919" d="M12 3.5C6.8 3.5 2.6 6.8 2.6 10.9c0 2.6 1.7 4.9 4.3 6.2l-1.1 4c-.1.3.3.6.6.4l4.7-3.1c.3 0 .6.1.9.1 5.2 0 9.4-3.3 9.4-7.5S17.2 3.5 12 3.5z"/></svg>카카오로 로그인</button>`:""}</div>
+      <div class="uor"><span>또는 이메일로</span></div>`:""}
       <form class="ubox" id="uForm"><input id="uEmail" type="email" placeholder="이메일" required autocomplete="email"><input id="uPw" type="password" placeholder="비밀번호 (6자 이상)" required minlength="6" autocomplete="current-password">
       <p class="uerr" id="uErr" hidden></p>
       <div class="ubtns"><button type="submit" class="ubtn">로그인</button><button type="button" class="ubtn ghost" id="uSignup">회원가입</button></div>
@@ -1008,7 +1051,9 @@ document.addEventListener("click",async e=>{
     if(!em||pw.length<6){er.hidden=false;er.textContent="이메일과 6자 이상 비밀번호를 넣어 주세요.";return}
     const {data,error}=await sb.auth.signUp({email:em,password:pw});
     er.hidden=false;er.textContent=error?error.message:(data.session?"가입 완료!":"가입 메일을 보냈어요. 메일의 링크를 누른 뒤 로그인해 주세요.");return}
-  if(t.closest("#uLogout")){await sb.auth.signOut();session=null;try{localStorage.removeItem(LS)}catch(_){}store={wishes:{}};await (async()=>{((window.DOGAM_DATA||{}).extra||[]).forEach(d=>{store.wishes[d.id]={...d,_t:0}});persist();emit()})();userUi();toastSafe("로그아웃했어요");return}
+  if(t.closest("#uLogout")){clearTimeout(pushT);if(dirty||syncing){setSync("저장 중…");try{await sync()}catch(_){}}
+    if(dirty&&!confirm("아직 계정에 저장하지 못한 기록이 있어요. 그래도 로그아웃할까요?\n(로그아웃하면 이 브라우저의 기록은 지워져요)"))return;
+    await sb.auth.signOut();session=null;dirty=false;remoteAt=null;try{localStorage.removeItem(LS)}catch(_){}store={wishes:{}};await (async()=>{((window.DOGAM_DATA||{}).extra||[]).forEach(d=>{store.wishes[d.id]={...d,_t:0}});persist();emit()})();userUi();toastSafe("로그아웃했어요");return}
   if(t.closest("#uSyncNow")){await pull();return}
   if(t.closest("#uExport")){const blob=new Blob([JSON.stringify({app:"wishdogam",at:Date.now(),wishes:store.wishes})],{type:"application/json"});
     const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`치이카와도감-백업-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);return}
@@ -1022,7 +1067,8 @@ document.addEventListener("submit",async e=>{
 });
 document.addEventListener("change",async e=>{
   if(e.target.id!=="uImport")return;const f=e.target.files[0];if(!f)return;
-  try{const j=JSON.parse(await f.text());if(!j.wishes)throw 0;for(const [id,d] of Object.entries(j.wishes)){store.wishes[id]={...d,_t:Math.max(d._t||0,1)}}changed();toastSafe("백업을 불러왔어요")}
+  try{const j=JSON.parse(await f.text());if(!j.wishes)throw 0;let n=0;for(const [id,d] of Object.entries(j.wishes)){if(!d||typeof d!=="object")continue;const x={...d,id,_t:Math.max(d._t||0,1)};const cur=store.wishes[id];if(!cur||x._t>(cur._t||0)){store.wishes[id]=x;n++}}
+    if(n)changed();toastSafe(n?`백업에서 기록 ${n}개를 불러왔어요`:"지금 기록이 백업보다 최신이라 바뀐 게 없어요")}
   catch(err){toastSafe("백업 파일이 아니에요")}
 });
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$u("uOverlay"))$u("uOverlay").hidden=true});
@@ -1531,7 +1577,6 @@ $("charSeg").addEventListener("click",e=>{const b=e.target.closest("button");if(
 
 $("list").addEventListener("click",async e=>{
   if(e.target.closest("a"))return;
-  if(e.target.closest(".loadmore")){state.limit+=120;render();return}
   const mb=e.target.closest(".more");if(mb){state.cat=mb.dataset.cat;saveUi();render();try{document.querySelector(".main").scrollTo({top:0});window.scrollTo({top:0})}catch(_){}return}
   const c=e.target.closest("[data-id]");if(!c)return;
   const it=state.items.find(x=>x.id===c.dataset.id);if(!it)return;
@@ -1556,9 +1601,7 @@ $("list").addEventListener("click",async e=>{
       Object.assign(it,ch);quick(it);QUIET++;QUIET_UNTIL=Date.now()+2500;if(on)toast("토벌 완료!","spear");
       try{await writeItem({...it,status:prev},ch)}catch(err){it.status=prev;render();throw err}
       return}
-    if(act==="promote"){await writeItem(it,{status:"wish",wishedAt:Date.now(),decidedAt:null});toast("위시에 담았어요","heart")}
-    else if(act==="unwish"){await writeItem(it,{status:"cand",decidedAt:null});toast("위시에서 뺐어요","undo")}
-    else if(act==="undo"){const back=it.from==="wish"?"wish":"cand";await writeItem(it,{status:back,decidedAt:null});toast((it.status==="bought"?"토벌":"참음")+" 취소 · "+(back==="wish"?"위시로 돌아갔어요":"원래대로 돌아갔어요"),"undo")}
+    if(act==="undo"){const back=it.from==="wish"?"wish":"cand";await writeItem(it,{status:back,decidedAt:null});toast((it.status==="bought"?"토벌":"참음")+" 취소 · "+(back==="wish"?"위시로 돌아갔어요":"원래대로 돌아갔어요"),"undo")}
     else{await writeItem(it,{status:act,decidedAt:Date.now(),from:it.status,cart:false});act==="pass"?toast(`${fmt(krw(it))}원 지켰어요`,"shield"):toast("토벌 완료","spear")}
   }catch(err){toast("저장하지 못했어요. 다시 눌러 주세요.");b.disabled=false}
 });
@@ -1706,6 +1749,9 @@ rateText();render();
   },()=>{clearTimeout(timer);state.error="불러오지 못했어요.";render()});
   db.doc("meta/settings").onSnapshot(s=>{const v=s.exists?s.data():{};if(v.jpyRate>0)RATES.JPY=v.jpyRate;if(v.cnyRate>0)RATES.CNY=v.cnyRate;if(v.rateDate)RATE_DATE=v.rateDate;rateText();render()},()=>{});
 })();
+
+/* 오프라인 지원: 사이트로 열었을 때만 (파일 더블클릭으로 열면 건너뜀) */
+if("serviceWorker" in navigator&&/^https?:$/.test(location.protocol))addEventListener("load",()=>{navigator.serviceWorker.register("sw.js").catch(()=>{})});
 
 /* 배경음악: config.js 의 bgm 에 유튜브 영상 ID 를 넣으면 바꿀 수 있어요 */
 (function(){

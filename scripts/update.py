@@ -15,10 +15,26 @@ TODAY=time.strftime("%Y.%m.%d",time.gmtime(time.time()+9*3600))
 UA={"User-Agent":"Mozilla/5.0 (wish-dogam updater)"}
 
 def load(name,default):
-    try: return json.load(open(D(name),encoding="utf-8"))
-    except Exception: return default
+    """파일이 없으면 default. 파일이 있는데 깨져 있으면 멈춤 (빈 목록으로 덮어쓰는 사고 방지)"""
+    if not os.path.exists(D(name)): return default
+    try:
+        with open(D(name),encoding="utf-8") as f: return json.load(f)
+    except Exception as e:
+        sys.exit(f"※ data/{name} 파일이 깨져 있어서 멈췄어요 ({e}). 이전 커밋으로 되돌린 뒤 다시 실행해 주세요.")
+def _count(obj):
+    if isinstance(obj,dict) and isinstance(obj.get("items"),list): return len(obj["items"])
+    return len(obj) if isinstance(obj,(list,dict)) else 0
+GUARD={"catalog.json","added.json","extra.json","market.json"}   # 갑자기 확 줄면 저장하지 않는 파일
 def save(name,obj):
-    json.dump(obj,open(D(name),"w",encoding="utf-8"),ensure_ascii=False,separators=(",",":"))
+    if name in GUARD and os.path.exists(D(name)) and not os.environ.get("ALLOW_SHRINK"):
+        try:
+            with open(D(name),encoding="utf-8") as f: old=_count(json.load(f))
+        except Exception: old=0
+        if old>=50 and _count(obj)<old*0.9:
+            sys.exit(f"※ data/{name} 이 {old}개 → {_count(obj)}개로 갑자기 줄어서 저장하지 않고 멈췄어요. (일부러 줄인 거면 ALLOW_SHRINK=1)")
+    tmp=D(name)+".tmp"
+    with open(tmp,"w",encoding="utf-8") as f: json.dump(obj,f,ensure_ascii=False,separators=(",",":"))
+    os.replace(tmp,D(name))
 def get_json(url,tries=3):
     for a in range(tries):
         try: return json.load(urllib.request.urlopen(urllib.request.Request(url,headers=UA),timeout=40))
@@ -455,7 +471,8 @@ def bundle():
         print("이름 다듬기",fix_all(c["items"])+fix_all(ex),"개")
     except Exception as e: print("이름 다듬기 실패",e)
     data={"catalog":c,"market":load("market.json",{}),"extra":ex,"restock":load("restock.json",{"items":[]}),"hidden":[h for h in load("hidden.json",[]) if not h.startswith(("tbx-","tm-"))],"dup":load("dup.json",{}),"updated":load("sync.json",{}).get("lastRun","")}
-    open(D("bundle.js"),"w",encoding="utf-8").write("window.DOGAM_DATA="+json.dumps(data,ensure_ascii=False,separators=(",",":"))+";\n")
+    with open(D("bundle.js.tmp"),"w",encoding="utf-8") as f: f.write("window.DOGAM_DATA="+json.dumps(data,ensure_ascii=False,separators=(",",":"))+";\n")
+    os.replace(D("bundle.js.tmp"),D("bundle.js"))
     print("bundle.js 작성",os.path.getsize(D("bundle.js"))//1024,"KB")
 
 def main():

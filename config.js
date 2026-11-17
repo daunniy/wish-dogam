@@ -3,5 +3,10 @@
    (비워두면 로그인 없이 이 브라우저에만 저장돼요) */
 window.DOGAM_CONFIG = {
   supabaseUrl: "https://mvhwjauvdhduepdlhkzk.supabase.co",
-  supabaseKey: "sb_publishable_QtI2rmvODkVQvWkw8WDlGQ_MZS74U1r"
+  supabaseKey: "sb_publishable_QtI2rmvODkVQvWkw8WDlGQ_MZS74U1r",
+  // 소셜 로그인 버튼: Supabase 에서 해당 Provider 를 켠 뒤에만 true 로 (설명서.txt 3단계 7번)
+  google: false,
+  kakao: true,
+  // 배경음악 유튜브 영상 ID (비워 두면 기본 음악)
+  bgm: ""
 };
