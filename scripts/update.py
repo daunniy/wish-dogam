@@ -144,6 +144,7 @@ def apply_official_names(lists,maps):
             if it.get("nameSrc")=="user": continue
             pre,_,h=it["id"].partition("-")
             nm=maps.get(pre,{}).get(h)
+            if nm: nm=re.sub(r"\s*\[[^\]]*(발송|예정|구매|배송|예약|취소|동시|지정|순차)[^\]]*\]","",nm).strip()
             if nm and it.get("name")!=nm: it["name"]=nm;it["nameSrc"]="official";n+=1
     print("공식 한국어 이름 적용",n,"개")
 
@@ -448,7 +449,12 @@ def bundle():
     c=dict(catalog);c["items"]=catalog["items"]+added
     try: auto_series(c["items"])
     except Exception as e: print("자동 시리즈 실패",e)
-    data={"catalog":c,"market":load("market.json",{}),"extra":load("extra.json",[]),"restock":load("restock.json",{"items":[]}),"hidden":[h for h in load("hidden.json",[]) if not h.startswith(("tbx-","tm-"))],"updated":load("sync.json",{}).get("lastRun","")}
+    ex=load("extra.json",[])
+    try:
+        from namefix import fix_all
+        print("이름 다듬기",fix_all(c["items"])+fix_all(ex),"개")
+    except Exception as e: print("이름 다듬기 실패",e)
+    data={"catalog":c,"market":load("market.json",{}),"extra":ex,"restock":load("restock.json",{"items":[]}),"hidden":[h for h in load("hidden.json",[]) if not h.startswith(("tbx-","tm-"))],"dup":load("dup.json",{}),"updated":load("sync.json",{}).get("lastRun","")}
     open(D("bundle.js"),"w",encoding="utf-8").write("window.DOGAM_DATA="+json.dumps(data,ensure_ascii=False,separators=(",",":"))+";\n")
     print("bundle.js 작성",os.path.getsize(D("bundle.js"))//1024,"KB")
 
