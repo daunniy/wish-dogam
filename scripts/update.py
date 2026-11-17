@@ -2,7 +2,7 @@
 - 일본 공식샵(chiikawamarket.jp) / 나가노마켓(치이카와 캐릭터만)에서 도감에 없는 상품을 추가
 - 기존 상품의 품절/판매중 상태 갱신
 - 외부 사이트 사진을 쓰는 상품 중 공식몰에 같은 상품이 있으면 공식몰 사진으로
-- 품절 상품의 메루카리 시세 갱신: 공식몰 일본어 이름으로 검색, 가장 최근 팔린 3개의 중간값 (하루 MKT_LIMIT개씩, 오래된 것부터)
+- 품절 상품의 메루카리 시세 갱신: 공식몰(없으면 다른 공식) 일본어 이름, 9090·쿠지는 규칙으로 만든 검색어로 검색, 가장 최근 팔린 3개의 중간값 (하루 MKT_LIMIT개씩, 오래된 것부터)
 - 끝나면 data/bundle.js 를 다시 만듦
 사용: python scripts/update.py   (환경변수 MKT_LIMIT=200(기본), SKIP_MERCARI=1, SKIP_SHOP=1)
 """
@@ -382,15 +382,9 @@ CHJ=[ja for ja,_ in CH]
 MKT_FLOOR=0.4   # 정가의 40% 미만으로 팔린 건 다른 상품(미니 사이즈 등)일 가능성이 커서 뺌
 def norm(s): return re.sub(r"[\s　・/／&＆×()（）【】「」!！?？~～]+","",s)
 OFF_PREFIX=re.compile(r"^(jp|ng|pk)-")
-def mk_name(it):
-    """메루카리 검색에 쓸 공식몰 일본어 이름. 공식몰 이름이 없으면 검색하지 않음
-       (공식몰 상품은 매일 공식몰 제목으로 nameJa 를 다시 맞추고, 공식몰과 이어 붙인 상품은 jaSrc=official)"""
-    if not (OFF_PREFIX.match(it["id"]) or it.get("jaSrc")=="official"): return ""
-    ja=(it.get("nameJa") or "").strip()
-    return ja if re.search(r"[ぁ-ヿ]",ja) else ""
 SET_PAREN=re.compile(r"全\s*\d+\s*種|ランダム|アソート|ブラインド|BOX|ボックス",re.I)
 def mk_query(ja,want=()):
-    """공식 이름 → 검색어: 【予約】 같은 안내문만 빼고 그대로.
+    """일본어 이름 → 검색어: 【予約】 같은 안내문만 빼고 그대로.
        옵션별로 쪼갠 상품(이름 끝이 （全6種） 등)은 그 부분 대신 캐릭터 이름으로"""
     ja=re.sub(r"【[^】]*】|［[^］]*］|[（(]ご確認ください[）)]|※.*$","",ja).strip()
     paren=(re.findall(r"[（(]([^）)]*)[）)]\s*$",ja) or [""])[0]
@@ -399,45 +393,81 @@ def mk_query(ja,want=()):
     head="ちいかわぽけっと " if base.startswith("ちいかわぽけっと") else "ちいかわ "
     core=BRAND.sub("",base).strip()
     return re.sub(r"\s+"," ",head+core+" "+paren).strip(),core,paren
+
+# 일본어 이름이 없는 상품 중 검색어를 확실히 만들 수 있는 것들
+NINE={"mascot":("マスコット",),"rubber":("ラバー",),"tee":("tシャツ","tee"),"pants":("パンツ",)}   # 9090 콜라보 (메루카리에선 「ちいかわ 9090 マスコット うさぎ」식)
+KUJI_SER=[("생일",("誕生日","バースデー","バースデイ","birthday")),("너구리",("たぬき","タヌキ")),("베이비",("baby","ベビー")),
+  ("크리스마스",("クリスマス","xmas","x'mas")),("문어 오징어",("タコ","イカ","たこ","いか")),("크레이프",("クレープ",)),
+  ("라멘",("ラーメン","らーめん")),("아이스크림",("アイス",))]
+DARAKE={"모몽가 쿠지":"モモンガ","쿠리만쥬 쿠지":"くりまんじゅう","우사기 쿠지":"うさぎ","시사 쿠지":"シーサー"}   # ○○だらけくじ
+def mk_plan(it):
+    """메루카리 검색 계획. 우선순위: 공식몰 일본어 이름 → 다른 공식 일본어 이름 → 9090·쿠지 규칙.
+       한국어 이름이나 「ちいかわ マスコット」 같은 대충 만든 검색어로는 검색하지 않음 (엉뚱한 게 잡혀서) → None"""
+    iid=it["id"];want=[j for j,ko in CH if ko in (it.get("chars") or [])]
+    ja=(it.get("nameJa") or "").strip()
+    m9=re.match(r"ex-9090-(\w+)-",iid)
+    if re.search(r"[ぁ-ヿ]",ja) and not m9:
+        kw,core,paren=mk_query(ja,want)
+        if not want: want=[c for c in CHJ if paren and c in paren]
+        toks=[(t,) for t in re.split(r"\s+",core) if len(norm(t))>=2]
+        off=bool(OFF_PREFIX.match(iid) or it.get("jaSrc")=="official")
+        return {"kw":kw,"must":toks,"miss":1 if len(toks)>=3 else 0,"want":want,"paren":"" if want else paren,"ctx":ja,"src":"official" if off else "ja"}
+    if m9 and m9.group(1) in NINE and want:
+        t=NINE[m9.group(1)]
+        return {"kw":f"ちいかわ 9090 {t[0]} {' '.join(want)}","must":[("9090",),t],"miss":0,"want":want,"paren":"","ctx":"","src":"collab"}
+    series=it.get("series") or ""
+    m=re.search(r"(?<![A-Za-z])([A-Z])\s*상(?![가-힣])|(라스트\s*원)",it.get("name",""))
+    if m and want and "쿠지" in series:
+        prize=("ラストワン",) if m.group(2) else (m.group(1)+"賞",)
+        if series in DARAKE:
+            dj=DARAKE[series]
+            return {"kw":f"ちいかわ {dj}だらけくじ {prize[0]} {' '.join(want)}","must":[("だらけ",),prize],"miss":0,"want":want,"paren":"","ctx":dj,"src":"kuji"}
+        alt=next((v for k,v in KUJI_SER if k in series),None)
+        if alt:
+            return {"kw":f"ちいかわ くじ {prize[0]} {' '.join(want)}","must":[("くじ",),alt,prize],"miss":0,"want":want,"paren":"","ctx":"","src":"kuji"}
+    return None
+def mk_name(it):
+    p=mk_plan(it);return p["kw"] if p else ""
+
 def mkt_job(it):
     from mercari import search
-    ja=mk_name(it)
-    want=[j for j,ko in CH if ko in (it.get("chars") or [])]
-    kw,core,paren=mk_query(ja,want)
-    if not want: want=[c for c in CHJ if paren and c in paren]
-    others=[c for c in CHJ if c!="ちいかわ" and c not in ja and c not in want]   # 이 상품과 상관없는 다른 캐릭터
-    toks=[t for t in re.split(r"\s+",core) if len(norm(t))>=2]
+    P=mk_plan(it)
+    want=P["want"];low=lambda x:norm(x).lower()
+    others=[c for c in CHJ if c!="ちいかわ" and c not in P["ctx"] and c not in want]   # 이 상품과 상관없는 다른 캐릭터
     retail=float(it.get("price") or 0) if it.get("currency")=="JPY" else 0
     d=None
     for a in range(3):
-        try: d=search(kw[:80],n=120);break
+        try: d=search(P["kw"][:80],n=120);break
         except Exception: time.sleep(3+a*5)
     if d is None: return it["id"],None
     sold=[]
     for x in d.get("items",[]):
-        nm=x.get("name","");n=norm(nm)
+        nm=x.get("name","");n=low(nm)
         if SETW.search(nm) or JUNK_MK.search(nm): continue
-        if sum(1 for t in toks if norm(t) not in n)>(1 if len(toks)>=3 else 0): continue   # 공식 이름의 단어가 (거의) 다 들어 있어야
+        if sum(1 for alts in P["must"] if not any(low(t) in n for t in alts))>P["miss"]: continue   # 이름의 단어가 (거의) 다 들어 있어야
         if want and not all(c in nm for c in want): continue
-        if not want and paren and norm(paren)[:6] not in n: continue
+        if P["paren"] and low(P["paren"])[:6] not in n: continue
         if any(c in nm for c in others): continue
         try: p=int(x["price"])
         except Exception: continue
-        if retail and p<retail*MKT_FLOOR: continue
+        if retail and P["src"]!="collab" and p<retail*MKT_FLOOR: continue   # 9090처럼 이름이 확실한 콜라보는 정가 아래로 팔린 것도 그대로 씀
         sold.append((int(x.get("updated") or x.get("created") or 0),p))   # updated = 팔린 시각
     sold.sort(reverse=True)
     last=[p for _,p in sold[:3]]
-    if len(last)<3: return it["id"],{"n":len(last),"at":TODAY,"v":2}
-    return it["id"],{"p":int(statistics.median(last)),"lo":min(last),"hi":max(last),"r":last,"n":3,"at":TODAY,"v":2}
+    base={"at":TODAY,"v":2,"src":P["src"]}
+    if len(last)<3: return it["id"],{**base,"n":len(last)}
+    return it["id"],{**base,"p":int(statistics.median(last)),"lo":min(last),"hi":max(last),"r":last,"n":3}
 
 def update_market(catalog,added,extra,market,limit):
-    items=catalog["items"]+added+extra
-    alive={i["id"] for i in items if mk_name(i)}
-    for k in [k for k in market if k not in alive]: del market[k]   # 없어진 상품·공식 이름 없는 상품의 시세는 정리
-    pool=[i for i in items if mk_name(i) and i.get("available") is False and not i.get("upcoming")]
-    key=lambda i:((market.get(i["id"]) or {}).get("v")==2,(market.get(i["id"]) or {}).get("at","0000"))   # 예전 방식 시세부터 새로
-    pool.sort(key=key)
-    todo=[i for i in pool if (market.get(i["id"]) or {}).get("at")!=TODAY][:limit]
+    items=[dict(i) for i in catalog["items"]+added+extra]
+    try: auto_series(items)   # 쿠지 시리즈 이름이 필요해서 (복사본에만 적용)
+    except Exception as e: print("자동 시리즈 실패",e)
+    alive={i["id"] for i in items if mk_plan(i)}
+    for k in [k for k in market if k not in alive]: del market[k]   # 없어진 상품·검색어를 못 만드는 상품의 시세는 정리
+    pool=[i for i in items if i["id"] in alive and i.get("available") is False and not i.get("upcoming")]
+    mv=lambda i:market.get(i["id"]) or {}
+    pool.sort(key=lambda i:(mv(i).get("v")==2,mv(i).get("at","0000")))   # 아직 한 번도 안 구한 것·예전 방식 시세부터
+    todo=[i for i in pool if mv(i).get("at")!=TODAY][:limit]
     print("메루카리 시세 조회",len(todo),"개")
     ok=fail=0
     with cf.ThreadPoolExecutor(3) as ex:
@@ -562,6 +592,10 @@ def bundle():
     except Exception as e: print("이름 다듬기 실패",e)
     # 화면에서 안 쓰는 칸은 빼서 bundle.js 를 가볍게 (원본 json 에는 그대로 남음)
     c["items"]=[{k:v for k,v in i.items() if k not in BUNDLE_DROP} for i in c["items"]]
+    for i in c["items"]+ex:   # 일본어 이름이 없는 상품(9090·쿠지 등)도 화면의 메루카리 버튼이 같은 검색어를 쓰게
+        try: P=mk_plan(i)
+        except Exception: P=None
+        if P and P["src"] in ("collab","kuji"): i["mkq"]=P["kw"]
     data={"catalog":c,"market":load("market.json",{}),"extra":ex,"restock":load("restock.json",{"items":[]}),"hidden":[h for h in load("hidden.json",[]) if not h.startswith(("tbx-","tm-"))],"dup":load("dup.json",{}),"updated":load("sync.json",{}).get("lastRun","")}
     with open(D("bundle.js.tmp"),"w",encoding="utf-8") as f: f.write("window.DOGAM_DATA="+json.dumps(data,ensure_ascii=False,separators=(",",":"))+";\n")
     os.replace(D("bundle.js.tmp"),D("bundle.js"))

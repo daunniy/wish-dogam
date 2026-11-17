@@ -1114,7 +1114,8 @@ const isJp=i=>i.currency==="JPY"||/^(jp|ng|pk)-/.test(i.id||"");
 /* 메루카리 검색어: 공식 일본어 이름 그대로 (일본어 이름이 없으면 메루카리 버튼을 숨김 — 「ちいかわ マスコット」 같은 대충 만든 검색어는 엉뚱한 게 나와서)
    옵션별로 쪼갠 상품(이름 끝이 （全6種） 등)은 그 부분 대신 캐릭터 이름 */
 const SETP=/[（(]\s*(全\s*\d+\s*種|ランダム|アソート|ブラインド|BOX|ボックス)[^）)]*[）)]\s*$/i;
-const mqOf=i=>{let j=i.nameJa||"";if(!/[ぁ-ヿ]/.test(j))return "";
+const mqOf=i=>{if(i.mkq)return i.mkq;let j=i.nameJa||"";if(!/[ぁ-ヿ]/.test(j))return "";   // 9090·쿠지는 업데이트가 만든 검색어(mkq)
+ 
   if(SETP.test(j)){const c=((i.chars&&i.chars.length)?i.chars:[i.character]).map(x=>JCH[x]).filter(Boolean).join(" ");j=j.replace(SETP,c?" "+c:"")}
   return mercariQ(j)};
 const mercariQ=j=>{let q=j.replace(/【[^】]*】|［[^］]*］|[（(]ご確認ください[）)]|※.*$/g,"").replace(/^(ナガノマーケット|ナガノキャラクターズ|ナガノフレンズ)\s*/,"").replace(/\s+/g," ").trim();if(!/ちいかわ/.test(q))q="ちいかわ "+q;return q};
@@ -1685,7 +1686,7 @@ function openForm(it){
   $("fLinks").innerHTML=(it?.nameJa?`<p class="ja">${esc(it.nameJa)}</p>`:"")+(lh?`<a href="${esc(lh)}" target="_blank" rel="noopener">판매 페이지 열기</a>`:"");
   const jq=it?mqOf(it):"";
   const mm=it&&mkt(it);
-  $("fMkt").innerHTML=(mm?`<div class="mbox"><b>메루카리 시세 ¥${fmt(mm.p)}</b><span>약 ${fmt(mm.p*RATES.JPY)}원 · ${mm.r?"최근 팔린 3개 "+mm.r.map(p=>"¥"+fmt(p)).join(" · "):`보통 ¥${fmt(mm.lo)}~¥${fmt(mm.hi)}`}</span><small>${mm.r?"가장 최근 팔린 3개의 중간값":"최근 판매완료 "+mm.n+"건 기준"} · ${esc(mm.at)}</small></div>`:"")+(it?((jq?`<a class="mb" href="https://jp.mercari.com/search?keyword=${encodeURIComponent(jq)}" target="_blank" rel="noopener">메루카리에서 찾기${ic("go","i sm")}</a>`:"")+`<a class="mb" href="https://m.bunjang.co.kr/search/products?q=${encodeURIComponent(bunjangQ(it))}" target="_blank" rel="noopener">번개장터에서 찾기${ic("go","i sm")}</a>`):"");
+  $("fMkt").innerHTML=(mm?`<div class="mbox"><b>메루카리 시세 ¥${fmt(mm.p)}</b><span>약 ${fmt(mm.p*RATES.JPY)}원 · ${mm.r?"최근 팔린 3개 "+mm.r.map(p=>"¥"+fmt(p)).join(" · "):`보통 ¥${fmt(mm.lo)}~¥${fmt(mm.hi)}`}</span><small>${mm.r?(mm.src==="kuji"?"같은 쿠지·같은 상·같은 캐릭터 중 가장 최근 팔린 3개 (추정)":"가장 최근 팔린 3개의 중간값"):"최근 판매완료 "+mm.n+"건 기준"} · ${esc(mm.at)}</small></div>`:"")+(it?((jq?`<a class="mb" href="https://jp.mercari.com/search?keyword=${encodeURIComponent(jq)}" target="_blank" rel="noopener">메루카리에서 찾기${ic("go","i sm")}</a>`:"")+`<a class="mb" href="https://m.bunjang.co.kr/search/products?q=${encodeURIComponent(bunjangQ(it))}" target="_blank" rel="noopener">번개장터에서 찾기${ic("go","i sm")}</a><a class="mb" href="https://kream.co.kr/search?keyword=${encodeURIComponent(bunjangQ(it))}&tab=products" target="_blank" rel="noopener">KREAM에서 찾기${ic("go","i sm")}</a>`):"");
   renderLineup(it);
   $("fLinks").style.flexDirection="column";$("fLinks").style.alignItems="center";$("fLinks").style.gap="14px";
   $("photoGroup").hidden=!assets||readOnly;
