@@ -38,6 +38,7 @@ RX = [
     (re.compile(r"\s*（\s*"), " ("), (re.compile(r"\s*）"), ")"),
     (re.compile(r"\s*・\s*"), " · "),
     (re.compile(r"\(\s+"), "("), (re.compile(r"\s+\)"), ")"),
+    (re.compile(r"\s*[（(](확인해 주세요|ご確認ください)[）)]"), ""),   # 공식몰 상품명에 붙은 안내 문구
     (re.compile(r"\s{2,}"), " "),
 ]
 

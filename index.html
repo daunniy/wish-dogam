@@ -1101,7 +1101,7 @@ const hasChar=(i,c)=>i.character===c;
 let CAT={items:[],rank:{},grid:10,jpTotal:10406},dbItems=[],catIds=new Set();
 const SHOP_SIZE={"일본 공식몰":()=>CAT.jpTotal||10406,"대원샵":()=>49};
 const rankOf=i=>{let r=CAT.rank[i.id];if(!r)r=(i.shop==="일본 공식몰"&&!i.spr)?0:i.popRank;const sz=SHOP_SIZE[i.shop];return r&&sz?r/sz():2};
-const imgOf=i=>i.photo?(String(i.photo).startsWith("data:")?i.photo:"/_blob/"+i.photo):(i.img||"");
+const imgOf=i=>{const p=String(i.photo||"");return /^(data:|https?:)/.test(p)?p:(i.img||"")};
 function imgHtml(i){const src=imgOf(i);if(src)return `<img src="${esc(src)}" alt="" loading="lazy" onerror="this.remove()">`;
   if(i.spr){const g=CAT.grid||10,k=i.spr[1],x=(k%g)*100/(g-1),y=Math.floor(k/g)*100/(g-1);return `<div class="spr" style="background-image:url(sp/m${+i.spr[0]}.jpg);background-position:${x}% ${y}%"></div>`}return ""}
 const SERIES=[[/超まじかる|まじかる|マジカル|매지컬/,"매지컬 치이카와"],[/てんし|あくま|堕天|천사♡악마|타락천사/,"천사♡악마"],[/クリニック|클리닉/,"치이카와 클리닉"],[/ちいかわぽけっと|치이카와 포켓/,"치이카와 포켓"],[/ちいかわパーク|치이카와 파크/,"치이카와 파크"],[/レストラン|레스토랑/,"치이카와 레스토랑"],[/ベーカリー|베이커리/,"치이카와 베이커리"],[/ラーメン豚|라멘 부타/,"치이카와 라멘 부타"],[/Chiikawa Baby/i,"Chiikawa Baby"],[/ちいかわらんど|치이카와 랜드/,"치이카와 랜드"],[/水族館|수족관/,"치이카와 수족관"],[/ちいかわ寿司|치이카와 스시/,"치이카와 스시"],[/映画ちいかわ|영화 치이카와/,"인어섬의 비밀 (영화)"],[/9090/,"치이카와×9090 갸루"],[/PUN。|PUN。/,"PUN。"],[/パジャマパーティ|파자마 파티/,"파자마 파티"],[/シーサーのおみやげやさん|시사의 기념품/,"시사의 기념품 가게"],[/クリスマス|크리스마스/,"크리스마스"],[/サンリオ|산리오/,"치이카와×산리오"],[/썸머/,"치이카와 썸머"],[/페어리/,"페어리"]];
@@ -1111,8 +1111,13 @@ const CH_COLOR={"치이카와":"#f4a7b9","하치와레":"#8bb8e8","우사기":"#
 const lineKey=i=>{const j=(i.nameJa||"").replace(/【[^】]*】/g,"").trim();if(!/[）)]\s*$/.test(j))return "";return (i.shop||"")+"|"+j.replace(/[（(][^（(）)]*[）)]\s*$/,"").trim()};
 const JCH={"치이카와":"ちいかわ","하치와레":"ハチワレ","우사기":"うさぎ","모몽가":"モモンガ","쿠리만쥬":"くりまんじゅう","랏코":"ラッコ","시사":"シーサー","후루혼야":"古本屋","카니":"カニ"},JCAT={"마스코트":"マスコット","누이":"ぬいぐるみ","인형":"ぬいぐるみ","피규어":"フィギュア","키링":"キーホルダー","문구":"文房具","의류":"Tシャツ"};
 const isJp=i=>i.currency==="JPY"||/^(jp|ng|pk)-/.test(i.id||"");
-const mqOf=i=>{if(i.nameJa)return mercariQ(i.nameJa);if(i.mq)return i.mq;if(!isJp(i))return "";const c=JCH[i.character]||"";return ("ちいかわ "+(c==="ちいかわ"?"":c)+" "+(JCAT[i.category]||"")).replace(/\s+/g," ").trim()};
-const mercariQ=j=>{let q=j.replace(/【[^】]*】/g,"").replace(/^(ナガノマーケット|ナガノキャラクターズ|ナガノフレンズ)\s*/,"").trim();if(!/ちいかわ/.test(q))q="ちいかわ "+q;return q};
+/* 메루카리 검색어: 공식 일본어 이름 그대로 (일본어 이름이 없으면 메루카리 버튼을 숨김 — 「ちいかわ マスコット」 같은 대충 만든 검색어는 엉뚱한 게 나와서)
+   옵션별로 쪼갠 상품(이름 끝이 （全6種） 등)은 그 부분 대신 캐릭터 이름 */
+const SETP=/[（(]\s*(全\s*\d+\s*種|ランダム|アソート|ブラインド|BOX|ボックス)[^）)]*[）)]\s*$/i;
+const mqOf=i=>{let j=i.nameJa||"";if(!/[ぁ-ヿ]/.test(j))return "";
+  if(SETP.test(j)){const c=((i.chars&&i.chars.length)?i.chars:[i.character]).map(x=>JCH[x]).filter(Boolean).join(" ");j=j.replace(SETP,c?" "+c:"")}
+  return mercariQ(j)};
+const mercariQ=j=>{let q=j.replace(/【[^】]*】|［[^］]*］|[（(]ご確認ください[）)]|※.*$/g,"").replace(/^(ナガノマーケット|ナガノキャラクターズ|ナガノフレンズ)\s*/,"").replace(/\s+/g," ").trim();if(!/ちいかわ/.test(q))q="ちいかわ "+q;return q};
 const bunjangQ=i=>{let q=(i.name||"").replace(/\s+/g," ").trim();if(!/치이카와/.test(q))q="치이카와 "+q;return q.slice(0,60)};
 const CHN=["치이카와","하치와레","우사기","모몽가","쿠리만쥬","쿠리만주","시사","랏코","후루혼야","검은별","아노코","키메라","데카츠요","고블린","무챠우맨","오데","장수풍뎅이","갑옷씨","가르마","토끼","하늘다람쥐","밤만쥬","라코","해달","카니"];
 const LK=new WeakMap();
@@ -1143,7 +1148,7 @@ function renderLineup(it){const el=$("fLineup");renderSeriesRel(it);
   el.hidden=false;
   el.innerHTML=`<div class="lh"><b>같은 라인업</b><span>${a.length}종 중 ${b}종 토벌</span></div><div class="meter"><i style="width:${b/a.length*100}%"></i></div><div class="lgrid">${a.map(x=>`<button type="button" class="lc ${x.id===it.id?"cur":""} ${x.status==="bought"?"own":""}" data-lid="${esc(x.id)}" style="--cc:${CH_COLOR[x.character]||"#d1d1d6"}"><span class="lb"><span class="art">${imgHtml(x)}</span>${x.status==="bought"?`<span class="lo">${ic("spear","i sm")}</span>`:x.status==="wish"?`<span class="lo w">${ic("heart","i sm")}</span>`:""}</span><span class="ll">${x.id===it.id?"보는 중":esc(x.character||"")}</span></button>`).join("")}</div>`;
 }
-const DESC=["name","nameJa","mq","img","spr","price","currency","noPrice","priceEst","estKind","series","released","category","character","chars","shop","link","linkLabel","available","upcoming","popRank"];
+const DESC=["name","nameJa","img","spr","price","currency","noPrice","priceEst","estKind","series","released","category","character","chars","shop","link","linkLabel","available","upcoming","popRank"];
 let CATMAP=null,HID=null;
 function merge(){if(!CATMAP||CATMAP.size!==CAT.items.length)CATMAP=new Map(CAT.items.map(i=>[i.id,i]));
   if(!HID){try{HID=new Set(((window.DOGAM_DATA||{}).hidden)||[])}catch(e){HID=new Set()}}
@@ -1173,7 +1178,7 @@ const soldOut=i=>i.available===false&&!i.upcoming;
 const mkt=i=>soldOut(i)&&MKT[i.id]&&MKT[i.id].p?MKT[i.id]:null;
 const premOf=i=>{const m=MKT[i.id];if(!m||!m.p||!(m.n>=3)||i.currency!=="JPY"||!(+i.price>0))return 0;return m.p/i.price};
 const premTag=i=>{const r=premOf(i);return r>=1.1?`<span class="prem" title="메루카리 판매완료 시세 ¥${fmt(MKT[i.id].p)} (정가 대비)">플미 +${Math.round((r-1)*100)}%</span>`:""};
-const mktHtml=i=>{const m=mkt(i);if(!m)return premTag(i)?`<span class="mrow">${premTag(i)}</span>`:"";return `<span class="mrow"><span class="mp" title="메루카리 판매완료 ${m.n}건 기준 (${m.at})">메루카리 ${fmt(m.p*RATES.JPY)}원<small>¥${fmt(m.p)}</small></span>${premTag(i)}</span>`};
+const mktHtml=i=>{const m=mkt(i);if(!m)return premTag(i)?`<span class="mrow">${premTag(i)}</span>`:"";return `<span class="mrow"><span class="mp" title="${m.r?"메루카리 가장 최근 팔린 3개 기준":"메루카리 판매완료 "+m.n+"건 기준"} (${m.at})">메루카리 ${fmt(m.p*RATES.JPY)}원<small>¥${fmt(m.p)}</small></span>${premTag(i)}</span>`};
 const priceHtml=i=>{if(i.noPrice)return `<span class="np">가격 정보 없음</span>`;if(i.priceEst){const k=i.estKind,sym=i.currency==="CNY"?`${(+i.price||0).toLocaleString("ko-KR",{maximumFractionDigits:2})}위안`:i.currency==="KRW"?`${fmt(i.price)}원`:`¥${fmt(i.price)}`;const lab=k==="sib"?"시리즈 정가":k==="avg"?"추정":"시세",tt=k==="sib"?"이 상품 정가를 못 찾아서 같은 시리즈 다른 캐릭터의 정가로 넣었어요":k==="avg"?"정가·시세를 못 찾아서 같은 곳에서 파는 같은 종류 상품의 보통 가격으로 추정했어요":"정가를 못 찾아서 메루카리 실거래 시세(중간값)로 표시했어요";return `<b class="won">${fmt(krw(i))}<em>원</em></b><span class="est" title="${tt}">${lab} ${sym}</span>`}if(i.currency==="KRW"||!i.currency)return `<b class="won">${fmt(i.price||0)}<em>원</em></b>`;
   const o=i.currency==="CNY"?`${(+i.price||0).toLocaleString("ko-KR",{maximumFractionDigits:2})}위안`:`¥${fmt(i.price||0)}`;
   return `<b class="won">${fmt(krw(i))}<em>원</em></b><span class="orig">${o}</span>`};
@@ -1678,7 +1683,7 @@ function openForm(it){
   $("fLinks").innerHTML=(it?.nameJa?`<p class="ja">${esc(it.nameJa)}</p>`:"")+(lh?`<a href="${esc(lh)}" target="_blank" rel="noopener">판매 페이지 열기</a>`:"");
   const jq=it?mqOf(it):"";
   const mm=it&&mkt(it);
-  $("fMkt").innerHTML=(mm?`<div class="mbox"><b>메루카리 시세 ¥${fmt(mm.p)}</b><span>약 ${fmt(mm.p*RATES.JPY)}원 · 보통 ¥${fmt(mm.lo)}~¥${fmt(mm.hi)}</span><small>최근 판매완료 ${mm.n}건 기준 · ${esc(mm.at)}</small></div>`:"")+(it?((jq?`<a class="mb" href="https://jp.mercari.com/search?keyword=${encodeURIComponent(jq)}" target="_blank" rel="noopener">메루카리에서 찾기${ic("go","i sm")}</a>`:"")+`<a class="mb" href="https://m.bunjang.co.kr/search/products?q=${encodeURIComponent(bunjangQ(it))}" target="_blank" rel="noopener">번개장터에서 찾기${ic("go","i sm")}</a>`):"");
+  $("fMkt").innerHTML=(mm?`<div class="mbox"><b>메루카리 시세 ¥${fmt(mm.p)}</b><span>약 ${fmt(mm.p*RATES.JPY)}원 · ${mm.r?"최근 팔린 3개 "+mm.r.map(p=>"¥"+fmt(p)).join(" · "):`보통 ¥${fmt(mm.lo)}~¥${fmt(mm.hi)}`}</span><small>${mm.r?"가장 최근 팔린 3개의 중간값":"최근 판매완료 "+mm.n+"건 기준"} · ${esc(mm.at)}</small></div>`:"")+(it?((jq?`<a class="mb" href="https://jp.mercari.com/search?keyword=${encodeURIComponent(jq)}" target="_blank" rel="noopener">메루카리에서 찾기${ic("go","i sm")}</a>`:"")+`<a class="mb" href="https://m.bunjang.co.kr/search/products?q=${encodeURIComponent(bunjangQ(it))}" target="_blank" rel="noopener">번개장터에서 찾기${ic("go","i sm")}</a>`):"");
   renderLineup(it);
   $("fLinks").style.flexDirection="column";$("fLinks").style.alignItems="center";$("fLinks").style.gap="14px";
   $("photoGroup").hidden=!assets||readOnly;

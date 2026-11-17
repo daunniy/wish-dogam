@@ -1,8 +1,9 @@
 /* 치이카와 위시 도감 — 오프라인 지원
    · 화면·굿즈 목록: 인터넷이 되면 항상 최신을 받고, 안 될 때만 저장해 둔 것을 씀
    · 도감에 들어 있는 사진(img/ sp/ photos/ icons/): 한 번 받으면 저장해 둔 것을 씀
-   · 다른 사이트(쇼핑몰 사진, 로그인, 환율)는 건드리지 않음 */
-const CACHE="dogam-v1";
+   · 다른 사이트(쇼핑몰 사진, 로그인, 환율)는 건드리지 않음
+   ※ img/ sp/ photos/ 의 사진을 같은 파일 이름으로 바꿨다면 아래 숫자를 하나 올려 줘 (폰에 저장된 옛 사진이 지워짐) */
+const CACHE="dogam-v2";
 self.addEventListener("install",()=>self.skipWaiting());
 self.addEventListener("activate",e=>e.waitUntil((async()=>{
   for(const k of await caches.keys())if(k!==CACHE)await caches.delete(k);

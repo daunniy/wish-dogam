@@ -1,9 +1,10 @@
 """치이카와 위시 도감 자동 업데이트
 - 일본 공식샵(chiikawamarket.jp) / 나가노마켓(치이카와 캐릭터만)에서 도감에 없는 상품을 추가
 - 기존 상품의 품절/판매중 상태 갱신
-- 품절 상품의 메루카리 판매완료 시세 갱신 (하루 MKT_LIMIT개씩, 오래된 것부터)
+- 외부 사이트 사진을 쓰는 상품 중 공식몰에 같은 상품이 있으면 공식몰 사진으로
+- 품절 상품의 메루카리 시세 갱신: 공식몰 일본어 이름으로 검색, 가장 최근 팔린 3개의 중간값 (하루 MKT_LIMIT개씩, 오래된 것부터)
 - 끝나면 data/bundle.js 를 다시 만듦
-사용: python scripts/update.py   (환경변수 MKT_LIMIT=200, SKIP_MERCARI=1, SKIP_SHOP=1)
+사용: python scripts/update.py   (환경변수 MKT_LIMIT=200(기본), SKIP_MERCARI=1, SKIP_SHOP=1)
 """
 import datetime,json,os,re,sys,time,statistics,urllib.request,urllib.parse,colorsys,io
 import concurrent.futures as cf
@@ -273,6 +274,7 @@ def update_shops(catalog,extra,added):
     def _nj(t): return re.sub(r"\s+","",re.sub(r"【[^】]*】","",t or ""))
     have_names={(i.get("shop"),_nj(i.get("nameJa"))) for i in catalog["items"]+extra+added if i.get("nameJa")}
     status={}
+    official={}   # 공식몰 상품 원본: id → 일본어 이름·사진·가격·링크 (사진 교체·메루카리 검색 이름에 씀)
     new=[]
     for base,shop,prefix,only_chiikawa,all_items in [("https://chiikawamarket.jp","일본 공식몰","jp-",False,True),("https://nagano-market.jp","나가노 마켓","ng-",True,False),("https://chiikawa-pocket-goods-store.com","치이카와 포켓 스토어","pk-",False,True)]:
         try: ps=pocket_products() if prefix=="pk-" else all_products(base)
@@ -283,12 +285,22 @@ def update_shops(catalog,extra,added):
             iid=prefix+p["handle"]
             avail=any(x.get("available") for x in p.get("variants",[]))
             status[iid]=avail
+            img=(p.get("images") or [{}])[0].get("src","")
+            official[iid]={"ja":p["title"],"img":img.split("?")[0]+"?width=480" if img else "",
+                "price":int(float(((p.get("variants") or [{}])[0]).get("price") or 0)),"link":f"{base}/products/{p['handle']}"}
             if iid in have or (shop,_nj(p["title"])) in have_names: continue
             if only_chiikawa and not any(ja in p["title"] for ja,_ in CH): continue
             if is_set_or_group(p["title"]): continue   # 세트·랜덤·단체 상품은 넣지 않음 (캐릭터별 단품만)
             if not avail and not all_items: continue   # 나가노마켓은 판매중인 것만, 치이카와샵은 전 상품
             if not p.get("images"): continue
             new.append((p,shop,prefix,base))
+            have.add(iid);have_names.add((shop,_nj(p["title"])))   # 같은 실행 안에서 두 번 들어가지 않게
+    # 이미 있는 공식몰 상품: 일본어 이름은 항상 공식몰 기준으로, 사진이 외부 사이트면 공식몰 사진으로
+    for it in catalog["items"]+added+extra:
+        o=official.get(it["id"])
+        if not o: continue
+        if o["ja"] and it.get("nameJa")!=o["ja"]: it["nameJa"]=o["ja"]
+        if o["img"] and is_external_img(it.get("img")): it["img"]=o["img"]
     try:
         tm=tracker_items(have,status);print("티몰 새 상품",len(tm))
         with cf.ThreadPoolExecutor(8) as ex:
@@ -310,53 +322,130 @@ def update_shops(catalog,extra,added):
                 it["available"]=a;n+=1
                 if a: it["upcoming"]=False
     print("상태 바뀐 상품",n)
-    return len(items)
+    return len(items),official
 
-# ---------- 메루카리 시세 ----------
+# ---------- 공식몰 사진: 외부 사이트 사진을 공식몰 사진으로 ----------
+OFF_ID=re.compile(r"^(jp|ng|pk)-[^~]+$")   # 공식몰 상품 id (옵션별로 쪼갠 jp-xxx~ 는 제외)
+def is_external_img(u):
+    """공식몰(shopify)·도감 안 사진이 아닌, 다른 사이트에서 빌려 온 사진인지"""
+    u=u or ""
+    return u.startswith("http") and "cdn.shopify.com" not in u
+def _nk(t):
+    t=re.sub(r"\[[^\]]*\]|【[^】]*】","",t or "")
+    return re.sub(r"[^0-9A-Za-z가-힣ぁ-ヿ一-龥Ⅰ-ↈ①-⑳]","",t).lower()
+def link_official(catalog,added,extra,official,ko_maps):
+    """공식몰에 같은 이름·같은 가격의 상품이 있으면
+       - 그 공식 상품이 이미 도감에 있으면 → 중복이니 합침 (dup.json, 내 기록은 공식 상품으로 옮겨짐)
+       - 없으면 → 사진·링크·일본어 이름을 공식몰 것으로"""
+    idx={}
+    def put(key,oid,o):
+        if len(key)<4: return
+        if key in idx:
+            if idx[key] and idx[key][0]!=oid: idx[key]=None   # 같은 이름의 공식 상품이 여럿 → 애매해서 안 씀
+        else: idx[key]=(oid,o)
+    in_data={}
+    for i in catalog["items"]+added:
+        if OFF_ID.match(i["id"]) and "cdn.shopify.com" in (i.get("img") or ""):
+            in_data[i["id"]]=i
+            o={"ja":i.get("nameJa",""),"img":i["img"],"price":i.get("price") or 0,"link":i.get("link","")}
+            put(_nk(i.get("name")),i["id"],o);put(_nk(i.get("nameJa")),i["id"],o)
+    for oid,o in official.items():
+        if not o.get("img"): continue
+        pre,_,h=oid.partition("-")
+        put(_nk((ko_maps.get(pre) or {}).get(h)),oid,o);put(_nk(o["ja"]),oid,o)
+    dup=load("dup.json",{});merged=photo=0
+    for L,can_merge in ((catalog["items"],True),(added,True),(extra,False)):
+        keep=[]
+        for it in L:
+            hit=None
+            if not OFF_ID.match(it["id"]) and is_external_img(it.get("img")) and it.get("currency","JPY")=="JPY":
+                hit=idx.get(_nk(it.get("name"))) or idx.get(_nk(it.get("nameJa")))
+            if hit:
+                oid,o=hit;a=float(it.get("price") or 0);b=float(o.get("price") or 0)
+                if a and b and abs(a-b)>max(10,b*0.02): hit=None   # 가격이 다르면 다른 상품으로 봄
+            if not hit: keep.append(it);continue
+            if can_merge and oid in in_data and oid!=it["id"]:
+                dup[it["id"]]=oid;merged+=1;continue
+            it["img"]=o["img"];photo+=1
+            if not it.get("link"): it["link"]=o["link"]
+            if o.get("ja"): it["nameJa"]=o["ja"];it["jaSrc"]="official"
+            keep.append(it)
+        L[:]=keep
+    save("dup.json",dup)
+    print("공식몰 사진으로 교체",photo,"개 · 공식 상품과 합침",merged,"개")
+
+# ---------- 메루카리 시세 (공식몰 일본어 이름으로 검색 · 가장 최근 팔린 3개 기준) ----------
 SETW=re.compile(r"セット|まとめ|\d+点|\d+体|\d+個|全種|コンプ|\d+種|セット売り|おまとめ|＋|\+")
+# 시세를 낮게 끌어내리는 매물: 하자·부속만·묶음 흥정·비공식(핸드메이드 등)
+JUNK_MK=re.compile(r"ジャンク|難あり|難有|訳あり|訳有|汚れ|破損|傷あり|キズあり|タグ(なし|無し|切|カット)|のみ|空箱|外箱|台紙|同梱|専用|おまけ|ハンドメイド|類似|パロディ|非公式")
 CHJ=[ja for ja,_ in CH]
+MKT_FLOOR=0.4   # 정가의 40% 미만으로 팔린 건 다른 상품(미니 사이즈 등)일 가능성이 커서 뺌
 def norm(s): return re.sub(r"[\s　・/／&＆×()（）【】「」!！?？~～]+","",s)
+OFF_PREFIX=re.compile(r"^(jp|ng|pk)-")
+def mk_name(it):
+    """메루카리 검색에 쓸 공식몰 일본어 이름. 공식몰 이름이 없으면 검색하지 않음
+       (공식몰 상품은 매일 공식몰 제목으로 nameJa 를 다시 맞추고, 공식몰과 이어 붙인 상품은 jaSrc=official)"""
+    if not (OFF_PREFIX.match(it["id"]) or it.get("jaSrc")=="official"): return ""
+    ja=(it.get("nameJa") or "").strip()
+    return ja if re.search(r"[ぁ-ヿ]",ja) else ""
+SET_PAREN=re.compile(r"全\s*\d+\s*種|ランダム|アソート|ブラインド|BOX|ボックス",re.I)
+def mk_query(ja,want=()):
+    """공식 이름 → 검색어: 【予約】 같은 안내문만 빼고 그대로.
+       옵션별로 쪼갠 상품(이름 끝이 （全6種） 등)은 그 부분 대신 캐릭터 이름으로"""
+    ja=re.sub(r"【[^】]*】|［[^］]*］|[（(]ご確認ください[）)]|※.*$","",ja).strip()
+    paren=(re.findall(r"[（(]([^）)]*)[）)]\s*$",ja) or [""])[0]
+    base=re.sub(r"[（(][^）)]*[）)]\s*$","",ja).strip()
+    if SET_PAREN.search(paren): paren=" ".join(want)
+    head="ちいかわぽけっと " if base.startswith("ちいかわぽけっと") else "ちいかわ "
+    core=BRAND.sub("",base).strip()
+    return re.sub(r"\s+"," ",head+core+" "+paren).strip(),core,paren
 def mkt_job(it):
     from mercari import search
-    ja=re.sub(r"【[^】]*】","",it["nameJa"]).strip()
-    base=re.sub(r"[（(][^）)]*[）)]\s*$","",ja).strip()
-    paren=re.findall(r"[（(]([^）)]*)[）)]\s*$",ja)
-    chs=[c for c in CHJ if paren and c in paren[0]]
-    core=BRAND.sub("",base)
-    toks=[t for t in re.split(r"\s+",core) if len(t)>=2]
-    key=max(toks,key=len) if toks else core
-    kw="ちいかわ "+core+(" "+paren[0] if paren else "")
+    ja=mk_name(it)
+    want=[j for j,ko in CH if ko in (it.get("chars") or [])]
+    kw,core,paren=mk_query(ja,want)
+    if not want: want=[c for c in CHJ if paren and c in paren]
+    others=[c for c in CHJ if c!="ちいかわ" and c not in ja and c not in want]   # 이 상품과 상관없는 다른 캐릭터
+    toks=[t for t in re.split(r"\s+",core) if len(norm(t))>=2]
+    retail=float(it.get("price") or 0) if it.get("currency")=="JPY" else 0
     d=None
     for a in range(3):
-        try: d=search(kw[:80]);break
+        try: d=search(kw[:80],n=120);break
         except Exception: time.sleep(3+a*5)
     if d is None: return it["id"],None
-    pr=[]
+    sold=[]
     for x in d.get("items",[]):
-        nm=x.get("name","")
-        if SETW.search(nm) or norm(key) not in norm(nm): continue
-        if chs and not any(c in nm for c in chs): continue
-        if paren and not chs and norm(paren[0])[:6] not in norm(nm): continue
-        try: pr.append(int(x["price"]))
-        except Exception: pass
-    if len(pr)<3: return it["id"],{"n":len(pr),"at":TODAY}
-    pr.sort();q1=pr[len(pr)//4];q3=pr[(3*len(pr))//4];iq=q3-q1
-    f=[p for p in pr if q1-1.5*iq<=p<=q3+1.5*iq] or pr
-    return it["id"],{"p":int(statistics.median(f)),"lo":f[len(f)//4],"hi":f[(3*len(f))//4],"n":len(f),"at":TODAY}
+        nm=x.get("name","");n=norm(nm)
+        if SETW.search(nm) or JUNK_MK.search(nm): continue
+        if sum(1 for t in toks if norm(t) not in n)>(1 if len(toks)>=3 else 0): continue   # 공식 이름의 단어가 (거의) 다 들어 있어야
+        if want and not all(c in nm for c in want): continue
+        if not want and paren and norm(paren)[:6] not in n: continue
+        if any(c in nm for c in others): continue
+        try: p=int(x["price"])
+        except Exception: continue
+        if retail and p<retail*MKT_FLOOR: continue
+        sold.append((int(x.get("updated") or x.get("created") or 0),p))   # updated = 팔린 시각
+    sold.sort(reverse=True)
+    last=[p for _,p in sold[:3]]
+    if len(last)<3: return it["id"],{"n":len(last),"at":TODAY,"v":2}
+    return it["id"],{"p":int(statistics.median(last)),"lo":min(last),"hi":max(last),"r":last,"n":3,"at":TODAY,"v":2}
 
-def update_market(catalog,added,market,limit):
-    pool=[i for i in catalog["items"]+added if i.get("nameJa") and i.get("available") is False and not i.get("upcoming")]
-    key=lambda i:(market.get(i["id"]) or {}).get("at","0000")
+def update_market(catalog,added,extra,market,limit):
+    items=catalog["items"]+added+extra
+    alive={i["id"] for i in items if mk_name(i)}
+    for k in [k for k in market if k not in alive]: del market[k]   # 없어진 상품·공식 이름 없는 상품의 시세는 정리
+    pool=[i for i in items if mk_name(i) and i.get("available") is False and not i.get("upcoming")]
+    key=lambda i:((market.get(i["id"]) or {}).get("v")==2,(market.get(i["id"]) or {}).get("at","0000"))   # 예전 방식 시세부터 새로
     pool.sort(key=key)
-    todo=[i for i in pool if key(i)!=TODAY][:limit]
+    todo=[i for i in pool if (market.get(i["id"]) or {}).get("at")!=TODAY][:limit]
     print("메루카리 시세 조회",len(todo),"개")
     ok=fail=0
     with cf.ThreadPoolExecutor(3) as ex:
         for iid,r in ex.map(mkt_job,todo):
             if r is None: fail+=1;continue
             old=market.get(iid) or {}
-            if r.get("p") or not old.get("p"): market[iid]=r
-            else: old["at"]=TODAY;market[iid]=old
+            if r.get("p") or not old.get("p") or old.get("v")!=2: market[iid]=r   # 예전 방식 값은 믿지 않고 바꿈
+            else: old["at"]=TODAY;market[iid]=old   # 이번에 3건이 안 모이면 지난번 값 유지
             ok+=1
     print("시세 성공",ok,"실패",fail)
     if todo and fail==len(todo): print("※ 메루카리 조회가 전부 실패했어요 (차단됐을 수 있음)")
@@ -460,6 +549,7 @@ def auto_series(items):
         y=year(i) or ky.get(key(i),"")
         i["series"]=f"할로윈 {y}" if y else "할로윈"
 
+BUNDLE_DROP={"mq","nameSrc","addedAt","jaSrc"}
 def bundle():
     catalog=load("catalog.json",{"items":[]});added=load("added.json",[])
     c=dict(catalog);c["items"]=catalog["items"]+added
@@ -470,6 +560,8 @@ def bundle():
         from namefix import fix_all
         print("이름 다듬기",fix_all(c["items"])+fix_all(ex),"개")
     except Exception as e: print("이름 다듬기 실패",e)
+    # 화면에서 안 쓰는 칸은 빼서 bundle.js 를 가볍게 (원본 json 에는 그대로 남음)
+    c["items"]=[{k:v for k,v in i.items() if k not in BUNDLE_DROP} for i in c["items"]]
     data={"catalog":c,"market":load("market.json",{}),"extra":ex,"restock":load("restock.json",{"items":[]}),"hidden":[h for h in load("hidden.json",[]) if not h.startswith(("tbx-","tm-"))],"dup":load("dup.json",{}),"updated":load("sync.json",{}).get("lastRun","")}
     with open(D("bundle.js.tmp"),"w",encoding="utf-8") as f: f.write("window.DOGAM_DATA="+json.dumps(data,ensure_ascii=False,separators=(",",":"))+";\n")
     os.replace(D("bundle.js.tmp"),D("bundle.js"))
@@ -482,14 +574,16 @@ def main():
         update_restock(catalog["items"]+added+extra);return bundle()
     n=0
     if not os.environ.get("SKIP_SHOP"):
-        n=update_shops(catalog,extra,added)
+        n,official=update_shops(catalog,extra,added)
         retranslate(added,int(os.environ.get("RETRANSLATE_LIMIT","1500")))
         maps={"jp":ko_titles("https://chiikawamarket.jp"),"ng":ko_titles("https://nagano-market.jp")}
         apply_official_names([catalog["items"],added,extra],maps)
+        try: link_official(catalog,added,extra,official,maps)
+        except Exception as e: print("공식몰 사진 교체 실패",e)
         update_series([catalog["items"],added,extra]);save("extra.json",extra)
         save("catalog.json",catalog);save("added.json",added)
     if not os.environ.get("SKIP_MERCARI"):
-        try: update_market(catalog,added,market,int(os.environ.get("MKT_LIMIT","400")))
+        try: update_market(catalog,added,extra,market,int(os.environ.get("MKT_LIMIT","200")))
         except Exception as e: print("메루카리 갱신 실패",e)
         save("market.json",market)
     try: update_restock(catalog["items"]+added+extra)
