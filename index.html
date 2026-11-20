@@ -589,7 +589,7 @@ body.sharing .app,body.sharing .tabbar{display:none!important}
 .svh a{height:40px;padding:0 16px;border-radius:20px;background:var(--tint);color:#fff;font-weight:700;font-size:14px;display:inline-flex;align-items:center;text-decoration:none}
 .svgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
 .svc{background:#fff;border:1px solid var(--edge);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
-.svc .im{aspect-ratio:1;background:#fff;display:grid;place-items:center;color:#c7c2c3;font-size:30px;font-weight:700}.svc .im img{width:100%;height:100%;object-fit:contain}
+.svc .im{position:relative;aspect-ratio:1;background:#fff;display:grid;place-items:center;color:#c7c2c3;font-size:30px;font-weight:700}.svc .im img{width:100%;height:100%;object-fit:contain}
 .svc .tx{padding:8px 10px 10px;display:flex;flex-direction:column;gap:3px;min-width:0}.svc .tx b{font-size:13px;font-weight:600;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .svc .tx span{font-size:13px;font-weight:700;color:var(--label)}.svc .tx small{font-size:11.5px;color:var(--label2)}
 /* 웹 테마 (캐릭터 색) */
@@ -1633,7 +1633,10 @@ async function listImage(kind){
   x.fillStyle="#fff";x.fillRect(0,0,W,H);x.textAlign="center";
   x.fillStyle=tint;x.font=F("bold",32);x.fillText("나의 "+SHARE_LABEL[kind],W/2,60);
   x.fillStyle="#8e8e93";x.font=F("",18);x.fillText(`${all.length}개 · 합계 ${fmt(sum(all))}원`,W/2,92);
-  const ims=await Promise.all(a.map(i=>loadImg(proxied(shareImgSrc(i)))));
+  const sheets={};const sheet=n=>sheets[n]||(sheets[n]=loadImg(`sp/m${+n}.jpg`));
+  const ims=await Promise.all(a.map(async i=>{const s=shareImgSrc(i);if(s)return loadImg(proxied(s));
+    if(!i.spr)return null;const sh=await sheet(i.spr[0]);if(!sh)return null;const g=CAT.grid||10,cw=sh.width/g,ch=sh.height/g,k=i.spr[1];
+    const c=document.createElement("canvas");c.width=cw;c.height=ch;c.getContext("2d").drawImage(sh,(k%g)*cw,Math.floor(k/g)*ch,cw,ch,0,0,cw,ch);return c}));
   const clip=(t,w)=>{if(x.measureText(t).width<=w)return t;while(t.length&&x.measureText(t+"…").width>w)t=t.slice(0,-1);return t+"…"};
   a.forEach((it,k)=>{const c=k%C,r=Math.floor(k/C),X=P+c*(S+G),Y=H0+r*(S+TX+G);
     x.fillStyle=soft;roundRect(x,X,Y,S,S,18);x.fill();
@@ -1658,7 +1661,7 @@ async function shareLink(kind){
   if(!S||!S.sb||!S.session){note.textContent="링크 공유는 로그인해야 쓸 수 있어요. 오른쪽 위 사람 버튼으로 로그인해 주세요.";note.hidden=false;return}
   const all=shareList(kind);if(!all.length){note.textContent="공유할 굿즈가 아직 없어요.";note.hidden=false;return}
   const id=Array.from(crypto.getRandomValues(new Uint8Array(9)),b=>"abcdefghijkmnpqrstuvwxyz23456789"[b%32]).join("");
-  const items=all.slice(0,500).map(i=>({n:i.name||"",img:shareImgSrc(i),p:+i.price||0,c:i.currency||"KRW",ch:i.character||"",cat:catOf(i),r:i.released||""}));
+  const items=all.slice(0,500).map(i=>({n:i.name||"",img:shareImgSrc(i),s:!shareImgSrc(i)&&i.spr?i.spr:undefined,g:CAT.grid||10,p:+i.price||0,c:i.currency||"KRW",ch:i.character||"",cat:catOf(i),r:i.released||""}));
   $("shLink").disabled=true;
   const {error}=await S.sb.from("shares").insert({id,user_id:S.session.user.id,kind,data:{items,total:Math.round(sum(all)),at:Date.now()}});
   $("shLink").disabled=false;
@@ -1690,7 +1693,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("sharePop").hidd
   const won=i=>i.p?fmt(i.p*(RATES[i.c]||1))+"원":"";
   document.title=`공유된 ${lab} · 치이카와 위시 도감`;
   V.innerHTML=`<div class="svh"><div><small>WISH DOGAM</small><h1>공유된 ${esc(lab)}</h1><p>${it.length}개 · 합계 ${fmt(d.total||0)}원 · ${esc((data.created_at||"").slice(0,10).replace(/-/g,"."))} 기준</p></div>${home}</div>
-  <div class="svgrid">${it.map(i=>`<article class="svc"><div class="im">${i.img?`<img src="${esc(i.img)}" alt="" loading="lazy" onerror="this.remove()">`:""}${i.img?"":esc((i.ch||"?").slice(0,1))}</div><div class="tx"><b>${esc(i.n)}</b><span>${won(i)}</span><small>${esc([i.ch,i.cat].filter(Boolean).join(" · "))}</small></div></article>`).join("")}</div>`;
+  <div class="svgrid">${it.map(i=>`<article class="svc"><div class="im">${i.img?`<img src="${esc(i.img)}" alt="" loading="lazy" onerror="this.remove()">`:i.s?(()=>{const g=i.g||10,k=i.s[1];return `<div class="spr" style="background-image:url(sp/m${+i.s[0]}.jpg);background-position:${(k%g)*100/(g-1)}% ${Math.floor(k/g)*100/(g-1)}%;background-size:${g*100}% ${g*100}%"></div>`})():esc((i.ch||"?").slice(0,1))}</div><div class="tx"><b>${esc(i.n)}</b><span>${won(i)}</span><small>${esc([i.ch,i.cat].filter(Boolean).join(" · "))}</small></div></article>`).join("")}</div>`;
 })();
 function roundRect(x,X,Y,w,h,r){x.beginPath();x.moveTo(X+r,Y);x.arcTo(X+w,Y,X+w,Y+h,r);x.arcTo(X+w,Y+h,X,Y+h,r);x.arcTo(X,Y+h,X,Y,r);x.arcTo(X,Y,X+w,Y,r);x.closePath()}
 
