@@ -439,7 +439,8 @@ def link_official(catalog,added,extra,official,ko_maps):
             if not hit: keep.append(it);continue
             if can_merge and oid in in_data and oid!=it["id"]:
                 dup[it["id"]]=oid;merged+=1;continue
-            it["img"]=o["img"];photo+=1
+            if not is_set_or_group(o.get("ja","")) and "~" not in it["id"]:   # 랜덤·여러 캐릭터 라인업이면 단체 사진이라 캐릭터별 사진을 덮지 않음
+                it["img"]=o["img"];photo+=1
             if not it.get("link"): it["link"]=o["link"]
             if o.get("ja"): it["nameJa"]=o["ja"];it["jaSrc"]="official"
             keep.append(it)
