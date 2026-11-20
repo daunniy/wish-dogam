@@ -452,6 +452,7 @@ SETW=re.compile(r"セット|まとめ|\d+点|\d+体|\d+個|全種|コンプ|\d+�
 # 시세를 낮게 끌어내리는 매물: 하자·부속만·묶음 흥정·비공식(핸드메이드 등)
 JUNK_MK=re.compile(r"ジャンク|難あり|難有|訳あり|訳有|汚れ|破損|傷あり|キズあり|タグ(なし|無し|切|カット)|のみ|空箱|外箱|台紙|同梱|専用|おまけ|ハンドメイド|類似|パロディ|非公式|(?<![仕同模])様")   # ○○様 = 특정 사람에게 맞춰 판 것
 CHJ=[ja for ja,_ in CH]
+MKT_DAYS=30    # 이 기간 안에 팔린 것만으로 시세를 냄
 MKT_FLOOR=0.4   # 정가의 40% 미만으로 팔린 건 다른 상품(미니 사이즈 등)일 가능성이 커서 뺌
 def norm(s): return re.sub(r"[\s　・/／&＆×()（）【】「」!！?？~～]+","",s)
 OFF_PREFIX=re.compile(r"^(jp|ng|pk)-")
@@ -527,12 +528,20 @@ def mkt_job(it):
         except Exception: continue
         if retail and P["src"]!="collab" and p<retail*MKT_FLOOR: continue   # 9090처럼 이름이 확실한 콜라보는 정가 아래로 팔린 것도 그대로 씀
         sold.append((int(x.get("updated") or x.get("created") or 0),p,str(x.get("id") or ""),nm[:60]))   # updated = 팔린 시각
+    sold=[(t if t<1e12 else t//1000,p,i,nm) for t,p,i,nm in sold]   # 초 단위로
     sold.sort(reverse=True)
-    top=sold[:5 if P["src"]=="collab" else 3];last=[t[1] for t in top]   # 콜라보는 값이 들쭉날쭉해서 최근 5건
-    base={"at":TODAY,"v":2,"src":P["src"]}
+    need=5 if P["src"]=="collab" else 3   # 콜라보는 값이 들쭉날쭉해서 최근 5건
+    cut=time.time()-MKT_DAYS*86400
+    recent=[t for t in sold if t[0]>=cut]
+    old=len(recent)<3   # 최근 30일 안에 3건이 안 모이면 더 예전 판매까지 (화면에 '오래된 시세'로 표시)
+    top=(sold if old else recent)[:need];last=[t[1] for t in top]
+    day=lambda t:time.strftime("%Y.%m.%d",time.gmtime(t+9*3600)) if t else ""
+    base={"at":TODAY,"v":3,"src":P["src"],"days":MKT_DAYS,"recent":len(recent)}
+    if sold: base["last"]=[sold[0][1],day(sold[0][0])]   # 가장 최근에 팔린 가격·날짜
     if len(last)<3: return it["id"],{**base,"n":len(last)}
+    if old: base["old"]=True
     return it["id"],{**base,"p":int(statistics.median(last)),"lo":min(last),"hi":max(last),"r":last,"n":len(last),
-        "m":[[t[2],t[3],t[1]] for t in top]}   # 계산에 쓴 메루카리 매물 (화면에서 직접 확인용)
+        "m":[[t[2],t[3],t[1],day(t[0])] for t in top]}   # 계산에 쓴 메루카리 매물 (화면에서 직접 확인용)
 
 def update_market(catalog,added,extra,market,limit):
     items=[dict(i) for i in catalog["items"]+added+extra]
@@ -549,7 +558,7 @@ def update_market(catalog,added,extra,market,limit):
     hot=lambda i:i["id"] in pop or (i.get("popRank") or 9999)<9999
     def rank(i):
         if i["id"] in first: return 0
-        if mv(i).get("p") and mv(i).get("v")!=2: return 1
+        if mv(i).get("p") and mv(i).get("v")!=3: return 1   # 예전 방식(기간 제한 없음) 시세부터 다시
         if not mv(i): return 2 if hot(i) else 3
         return 4
     pool.sort(key=lambda i:(rank(i),pop.get(i["id"],9999),mv(i).get("at","0000")))
@@ -560,7 +569,7 @@ def update_market(catalog,added,extra,market,limit):
         for iid,r in ex.map(mkt_job,todo):
             if r is None: fail+=1;continue
             old=market.get(iid) or {}
-            if r.get("p") or not old.get("p") or old.get("v")!=2: market[iid]=r   # 예전 방식 값은 믿지 않고 바꿈
+            if r.get("p") or not old.get("p") or old.get("v")!=3: market[iid]=r   # 예전 방식 값은 믿지 않고 바꿈
             else: old["at"]=TODAY;market[iid]=old   # 이번에 3건이 안 모이면 지난번 값 유지
             ok+=1
     print("시세 성공",ok,"실패",fail)
