@@ -573,6 +573,25 @@ h1::after{content:"";display:inline-block;width:.42em;height:.42em;margin-left:.
 /* ───── 깔끔한 테마 (상품이 주인공) ───── */
 :root{--font:"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;--round:var(--font);--hand:var(--font);--cream:#f6f5f4;--bg:#f6f5f4;--card:#fff;--edge:#ebe8e7;--line:#ebe8e7;--pink:#dc7896;--tint:#c9668a;--pink2:#f7e9ee;--pink3:#fbf4f6;--brown:#2f2a2b;--label:#242022}
 body{background:#f6f5f4!important;background-image:none!important;font-family:var(--font)!important}
+/* 공유 */
+.sharepop{position:fixed;z-index:40;width:min(340px,calc(100vw - 32px));background:#fff;border:1px solid var(--edge);border-radius:18px;padding:16px;box-shadow:0 12px 32px rgba(0,0,0,.12);display:flex;flex-direction:column;gap:10px}
+.sharepop > b{font-size:16px;color:var(--label)}.sharepop > p{margin:-6px 0 2px;font-size:13px;color:var(--label2)}
+.shopt{display:flex;align-items:center;gap:12px;text-align:left;padding:12px;border-radius:14px;background:var(--pink3);border:1px solid var(--edge);color:var(--label)}
+.shopt:hover{border-color:var(--pink)}.shopt svg{color:var(--tint);flex:none}.shopt span{display:flex;flex-direction:column;gap:2px;min-width:0}.shopt b{font-size:14.5px}.shopt small{font-size:12px;color:var(--label2)}
+.shopt:disabled{opacity:.5}
+.shres{display:flex;gap:6px}.shres input{flex:1;min-width:0;height:38px;border-radius:10px;border:1px solid var(--edge);padding:0 10px;font-size:13px;background:var(--pink3);color:var(--label)}
+.shres button{height:38px;padding:0 14px;border-radius:10px;background:var(--tint);color:#fff;font-weight:700;font-size:13.5px}
+.shnote{margin:0;font-size:12.5px;color:var(--label2);line-height:1.5}
+body.sharing .app,body.sharing .tabbar{display:none!important}
+.shareview{max-width:1000px;margin:0 auto;padding:28px max(16px,env(safe-area-inset-right,0px)) 60px max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:18px}
+.svh{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.svh small{display:block;font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--pink)}.svh h1{margin:4px 0 2px}.svh p{margin:0;color:var(--label2);font-size:14px}
+.svh a{height:40px;padding:0 16px;border-radius:20px;background:var(--tint);color:#fff;font-weight:700;font-size:14px;display:inline-flex;align-items:center;text-decoration:none}
+.svgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.svc{background:#fff;border:1px solid var(--edge);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
+.svc .im{aspect-ratio:1;background:#fff;display:grid;place-items:center;color:#c7c2c3;font-size:30px;font-weight:700}.svc .im img{width:100%;height:100%;object-fit:contain}
+.svc .tx{padding:8px 10px 10px;display:flex;flex-direction:column;gap:3px;min-width:0}.svc .tx b{font-size:13px;font-weight:600;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.svc .tx span{font-size:13px;font-weight:700;color:var(--label)}.svc .tx small{font-size:11.5px;color:var(--label2)}
 /* 웹 테마 (캐릭터 색) */
 :root[data-skin="chiikawa"]{--pink:#f08fa8;--tint:#d9708f;--pink2:#fdecf1;--pink3:#fff6f8;--cream:#fff8f9;--bg:#fff8f9;--edge:#f6e3e8;--line:#f6e3e8}
 :root[data-skin="hachiware"]{--pink:#6fa3e6;--tint:#4f86cc;--pink2:#e6f0fb;--pink3:#f3f7fd;--cream:#f4f7fb;--bg:#f4f7fb;--edge:#dde7f3;--line:#dde7f3}
@@ -777,6 +796,7 @@ h1::after{display:none!important;content:none!important}
   <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3.5 13.9 9 19.5 11 13.9 13 12 18.5 10.1 13 4.5 11 10.1 9z"/><path d="M18.5 16.5v4M16.5 18.5h4"/></symbol>
   <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m15.5 15.5 4.5 4.5"/></symbol>
   <symbol id="i-filter" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 15V4"/><path d="m7.5 8.5 4.5-4.5 4.5 4.5"/><path d="M5 12.5V18a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5.5"/></symbol>
   <symbol id="i-go" viewBox="0 0 24 24"><path d="M8 16 16.5 7.5"/><path d="M9.5 7.5h7v7"/></symbol>
   <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 7 4.5 11.5 9 16"/><path d="M5 11.5h9a5 5 0 0 1 0 10h-2"/></symbol>
   <symbol id="i-dex" viewBox="0 0 24 24"><rect x="4" y="4" width="4" height="4" rx="1"/><rect x="10" y="4" width="4" height="4" rx="1"/><rect x="16" y="4" width="4" height="4" rx="1"/><rect x="4" y="10" width="4" height="4" rx="1"/><rect x="10" y="10" width="4" height="4" rx="1"/><rect x="16" y="10" width="4" height="4" rx="1"/><rect x="4" y="16" width="4" height="4" rx="1"/><rect x="10" y="16" width="4" height="4" rx="1"/><rect x="16" y="16" width="4" height="4" rx="1"/></symbol>
@@ -802,6 +822,7 @@ h1::after{display:none!important;content:none!important}
         <button class="iconbtn" id="filterBtn" type="button" aria-label="필터와 정렬"><svg class="i"><use href="#i-filter"/></svg></button>
         <button class="iconbtn" id="userBtn" type="button" aria-label="로그인"><svg class="i"><use href="#i-user"/></svg></button>
         <button class="iconbtn" id="cartBtn" type="button" aria-label="장바구니"><svg class="i"><use href="#i-cart"/></svg></button>
+        <button class="iconbtn" id="shareBtn" type="button" aria-label="공유하기" hidden><svg class="i"><use href="#i-share"/></svg></button>
         <button class="iconbtn" id="skinBtn" type="button" aria-label="테마 바꾸기" aria-expanded="false" aria-controls="skinPop"><svg class="i"><use href="#i-palette"/></svg></button>
         <button class="iconbtn" id="addBtn" type="button" aria-label="직접 추가"><svg class="i"><use href="#i-plus"/></svg></button>
       </div>
@@ -898,6 +919,14 @@ h1::after{display:none!important;content:none!important}
   </div>
 </div>
 <div class="skinpop" id="skinPop" role="dialog" aria-label="테마" hidden><b>테마</b><div class="skins" id="skinList"></div></div>
+<div class="sharepop" id="sharePop" role="dialog" aria-label="공유하기" hidden>
+  <b id="shTitle">공유하기</b><p id="shSub"></p>
+  <button type="button" class="shopt" id="shImg"><svg class="i"><use href="#i-grid"/></svg><span><b>이미지로 공유</b><small>목록을 사진 한 장으로 만들어 저장하거나 보내요</small></span></button>
+  <button type="button" class="shopt" id="shLink"><svg class="i"><use href="#i-go"/></svg><span><b>링크로 공유</b><small>받은 사람이 링크를 열면 목록을 볼 수 있어요 (로그인 필요)</small></span></button>
+  <div class="shres" id="shRes" hidden><input id="shUrl" readonly aria-label="공유 링크"><button type="button" id="shCopy">복사</button></div>
+  <p class="shnote" id="shNote" hidden></p>
+</div>
+<section class="shareview" id="shareView" hidden></section>
 <div class="toast" id="toast" hidden></div>
 
 <script>
@@ -1041,8 +1070,10 @@ async function initSB(){
   sb.auth.onAuthStateChange((_e,s)=>{const was=session&&session.user.id;session=s;userUi();if(s&&s.user.id!==was){ready.then(pull)}});
   userUi();
   if(session)ready.then(pull);
-  else{let later=null;try{later=sessionStorage.getItem("dogam-later")}catch(_){}if(!later)openUser()}
+  else{let later=null;try{later=sessionStorage.getItem("dogam-later")}catch(_){}if(!later&&!new URLSearchParams(location.search).get("share"))openUser()}
 }
+window.DOGAM_SB=()=>({sb,session,hasSB});
+window.DOGAM_SB_READY=new Promise(ok=>{const t=setInterval(()=>{if(sb||!hasSB){clearInterval(t);ok()}},100);setTimeout(()=>{clearInterval(t);ok()},8000)});
 
 /* ---------- 로그인 화면 ---------- */
 const $u=id=>document.getElementById(id);
@@ -1243,6 +1274,7 @@ function renderTop(){
   const w=byStatus("wish"),p=byStatus("pass"),b=byStatus("bought");
   {const W=document.querySelector(".widget"),one={wish:"wish",bought:"bought",pass:"saved"}[state.status];
    W.hidden=!one;W.classList.toggle("one",!!one);
+   $("shareBtn").hidden=!(state.loaded&&(state.status==="wish"||state.status==="bought"));
    W.querySelectorAll(":scope > button").forEach(x=>x.hidden=!x.classList.contains(one));
    const rh=state.loaded&&state.status==="all"?restockHTML():"",rt=$("rsTop");if(rt._h!==rh){rt.innerHTML=rh;rt._h=rh}}
   const mkw=i=>{const m=(typeof MKT!=="undefined"&&MKT)?MKT[i.id]:null;return m&&m.p&&!m.chk&&(m.n||0)>=3&&!i.priceEst?m.p*(RATES.JPY||9.4):krw(i)};
@@ -1587,6 +1619,79 @@ async function shelfImage(){
   x.fillStyle=pink?"#d88aa2":"#aeaeb2";x.font="16px sans-serif";x.fillText("치이카와 위시 도감",W/2,H-24);
   cv.toBlob(bl=>{if(!bl){toast("이미지를 만들지 못했어요");return}const u=URL.createObjectURL(bl);const l=document.createElement("a");l.href=u;l.download="굿즈진열장.png";document.body.appendChild(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);toast("진열장 이미지를 저장했어요","spark")},"image/png");
 }
+/* ───── 위시·토벌 목록 공유 (이미지 / 링크) ───── */
+const SHARE_LABEL={wish:"위시 리스트",bought:"토벌 목록"};
+const shareList=k=>byStatus(k).slice().sort((a,b)=>((b.decidedAt||b.wishedAt||b.createdAt||0)-(a.decidedAt||a.wishedAt||a.createdAt||0)));
+const shareImgSrc=i=>{const s=imgOf(i);return s&&!s.startsWith("data:")?s:(i.img||"")};
+async function listImage(kind){
+  const all=shareList(kind),MAX=40,a=all.slice(0,MAX);
+  const C=Math.min(4,Math.max(a.length,1)),R2=Math.ceil(a.length/C)||1,S=200,G=16,P=32,H0=118,TX=58;
+  const W=P*2+C*S+(C-1)*G,H=H0+R2*(S+TX+G)+(all.length>MAX?40:0)+50;
+  const cv=document.createElement("canvas");cv.width=W;cv.height=H;const x=cv.getContext("2d");
+  const cs=getComputedStyle(document.documentElement),tint=cs.getPropertyValue("--tint").trim()||"#c9668a",soft=cs.getPropertyValue("--pink3").trim()||"#fbf4f6";
+  const F=(w,s)=>`${w} ${s}px 'Noto Sans KR','Apple SD Gothic Neo','Malgun Gothic',sans-serif`;
+  x.fillStyle="#fff";x.fillRect(0,0,W,H);x.textAlign="center";
+  x.fillStyle=tint;x.font=F("bold",32);x.fillText("나의 "+SHARE_LABEL[kind],W/2,60);
+  x.fillStyle="#8e8e93";x.font=F("",18);x.fillText(`${all.length}개 · 합계 ${fmt(sum(all))}원`,W/2,92);
+  const ims=await Promise.all(a.map(i=>loadImg(proxied(shareImgSrc(i)))));
+  const clip=(t,w)=>{if(x.measureText(t).width<=w)return t;while(t.length&&x.measureText(t+"…").width>w)t=t.slice(0,-1);return t+"…"};
+  a.forEach((it,k)=>{const c=k%C,r=Math.floor(k/C),X=P+c*(S+G),Y=H0+r*(S+TX+G);
+    x.fillStyle=soft;roundRect(x,X,Y,S,S,18);x.fill();
+    const im=ims[k];if(im){const sc=Math.min((S-20)/im.width,(S-20)/im.height);const w=im.width*sc,h=im.height*sc;x.drawImage(im,X+(S-w)/2,Y+(S-h)/2,w,h)}
+    else{x.fillStyle="#d1d1d6";x.font=F("bold",54);x.fillText((it.character||"?").slice(0,1),X+S/2,Y+S/2+18)}
+    x.textAlign="left";x.fillStyle="#2b2427";x.font=F("",15);x.fillText(clip(it.name||"",S),X,Y+S+22);
+    x.fillStyle=tint;x.font=F("bold",15);x.fillText(it.price?fmt(krw(it))+"원":"",X,Y+S+44);x.textAlign="center"});
+  x.fillStyle="#aeaeb2";x.font=F("",15);
+  if(all.length>MAX)x.fillText(`외 ${all.length-MAX}개`,W/2,H-62);
+  x.fillText("치이카와 위시 도감",W/2,H-22);
+  return await new Promise(ok=>cv.toBlob(ok,"image/png"));
+}
+async function shareImage(kind){
+  toast("이미지 만드는 중…");
+  const bl=await listImage(kind);if(!bl){toast("이미지를 만들지 못했어요");return}
+  const name=`${SHARE_LABEL[kind]}.png`,file=new File([bl],name,{type:"image/png"});
+  try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:"나의 "+SHARE_LABEL[kind]});return}}catch(e){if(e&&e.name==="AbortError")return}
+  const u=URL.createObjectURL(bl);const l=document.createElement("a");l.href=u;l.download=name;document.body.appendChild(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);toast("이미지를 저장했어요","spark");
+}
+async function shareLink(kind){
+  const S=window.DOGAM_SB&&window.DOGAM_SB();const note=$("shNote");note.hidden=true;
+  if(!S||!S.sb||!S.session){note.textContent="링크 공유는 로그인해야 쓸 수 있어요. 오른쪽 위 사람 버튼으로 로그인해 주세요.";note.hidden=false;return}
+  const all=shareList(kind);if(!all.length){note.textContent="공유할 굿즈가 아직 없어요.";note.hidden=false;return}
+  const id=Array.from(crypto.getRandomValues(new Uint8Array(9)),b=>"abcdefghijkmnpqrstuvwxyz23456789"[b%32]).join("");
+  const items=all.slice(0,500).map(i=>({n:i.name||"",img:shareImgSrc(i),p:+i.price||0,c:i.currency||"KRW",ch:i.character||"",cat:catOf(i),r:i.released||""}));
+  $("shLink").disabled=true;
+  const {error}=await S.sb.from("shares").insert({id,user_id:S.session.user.id,kind,data:{items,total:Math.round(sum(all)),at:Date.now()}});
+  $("shLink").disabled=false;
+  if(error){note.textContent=/shares|relation|schema/i.test(error.message||"")?"링크 공유를 쓰려면 Supabase 에 공유 표를 한 번 만들어야 해요 (설명서.txt 4단계).":"링크를 만들지 못했어요: "+error.message;note.hidden=false;return}
+  const url=location.origin+location.pathname+"?share="+id;
+  $("shUrl").value=url;$("shRes").hidden=false;
+  note.textContent="지금 목록을 찍어 둔 링크예요. 나중에 바뀐 건 다시 공유해야 보여요.";note.hidden=false;
+  try{if(navigator.share&&matchMedia("(pointer:coarse)").matches){await navigator.share({title:"나의 "+SHARE_LABEL[kind],url});}}catch(_){}
+}
+function openShare(){const P=$("sharePop"),k=state.status;if(!SHARE_LABEL[k])return;
+  $("shTitle").textContent=SHARE_LABEL[k]+" 공유하기";$("shSub").textContent=`${byStatus(k).length}개 · 합계 ${fmt(sum(byStatus(k)))}원`;
+  $("shRes").hidden=true;$("shNote").hidden=true;P.hidden=false;
+  const r=$("shareBtn").getBoundingClientRect();P.style.top=(r.bottom+8)+"px";P.style.right=Math.max(16,innerWidth-r.right)+"px"}
+$("shareBtn").addEventListener("click",e=>{e.stopPropagation();$("sharePop").hidden?openShare():($("sharePop").hidden=true)});
+$("shImg").addEventListener("click",()=>shareImage(state.status).catch(()=>toast("이미지를 만들지 못했어요")));
+$("shLink").addEventListener("click",()=>shareLink(state.status).catch(e=>{$("shLink").disabled=false;$("shNote").textContent="링크를 만들지 못했어요";$("shNote").hidden=false}));
+$("shCopy").addEventListener("click",async()=>{const v=$("shUrl").value;try{await navigator.clipboard.writeText(v);toast("링크를 복사했어요","spark")}catch(_){$("shUrl").select()}});
+document.addEventListener("click",e=>{const P=$("sharePop");if(!P.hidden&&!e.target.closest("#sharePop,#shareBtn"))P.hidden=true});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("sharePop").hidden)$("sharePop").hidden=true});
+/* 공유 링크로 들어왔을 때: 그 목록만 보여 줌 */
+(async()=>{const sid=new URLSearchParams(location.search).get("share");if(!sid)return;
+  document.body.classList.add("sharing");const V=$("shareView");V.hidden=false;V.innerHTML=`<p class="shnote">불러오는 중…</p>`;
+  await (window.DOGAM_SB_READY||Promise.resolve());const S=window.DOGAM_SB&&window.DOGAM_SB();
+  const home=`<a href="${esc(location.pathname)}">내 도감 열기</a>`;
+  if(!S||!S.sb){V.innerHTML=`<div class="svh"><div><h1>공유된 목록</h1><p>이 도감은 공유 기능이 꺼져 있어요.</p></div>${home}</div>`;return}
+  const {data,error}=await S.sb.from("shares").select("kind,data,created_at").eq("id",sid).maybeSingle();
+  if(error||!data){V.innerHTML=`<div class="svh"><div><h1>공유된 목록을 찾을 수 없어요</h1><p>링크가 잘못됐거나 지워졌어요.</p></div>${home}</div>`;return}
+  const d=data.data||{},it=d.items||[],lab=SHARE_LABEL[data.kind]||"목록";
+  const won=i=>i.p?fmt(i.p*(RATES[i.c]||1))+"원":"";
+  document.title=`공유된 ${lab} · 치이카와 위시 도감`;
+  V.innerHTML=`<div class="svh"><div><small>WISH DOGAM</small><h1>공유된 ${esc(lab)}</h1><p>${it.length}개 · 합계 ${fmt(d.total||0)}원 · ${esc((data.created_at||"").slice(0,10).replace(/-/g,"."))} 기준</p></div>${home}</div>
+  <div class="svgrid">${it.map(i=>`<article class="svc"><div class="im">${i.img?`<img src="${esc(i.img)}" alt="" loading="lazy" onerror="this.remove()">`:""}${i.img?"":esc((i.ch||"?").slice(0,1))}</div><div class="tx"><b>${esc(i.n)}</b><span>${won(i)}</span><small>${esc([i.ch,i.cat].filter(Boolean).join(" · "))}</small></div></article>`).join("")}</div>`;
+})();
 function roundRect(x,X,Y,w,h,r){x.beginPath();x.moveTo(X+r,Y);x.arcTo(X+w,Y,X+w,Y+h,r);x.arcTo(X+w,Y+h,X,Y+h,r);x.arcTo(X,Y+h,X,Y,r);x.arcTo(X,Y,X+w,Y,r);x.closePath()}
 
 $("list").addEventListener("click",async e=>{
