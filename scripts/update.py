@@ -450,7 +450,7 @@ def link_official(catalog,added,extra,official,ko_maps):
 # ---------- 메루카리 시세 (공식몰 일본어 이름으로 검색 · 가장 최근 팔린 3개 기준) ----------
 SETW=re.compile(r"セット|まとめ|\d+点|\d+体|\d+個|全種|コンプ|\d+種|セット売り|おまとめ|＋|\+")
 # 시세를 낮게 끌어내리는 매물: 하자·부속만·묶음 흥정·비공식(핸드메이드 등)
-JUNK_MK=re.compile(r"ジャンク|難あり|難有|訳あり|訳有|汚れ|破損|傷あり|キズあり|タグ(なし|無し|切|カット)|のみ|空箱|外箱|台紙|同梱|専用|おまけ|ハンドメイド|類似|パロディ|非公式")
+JUNK_MK=re.compile(r"ジャンク|難あり|難有|訳あり|訳有|汚れ|破損|傷あり|キズあり|タグ(なし|無し|切|カット)|のみ|空箱|外箱|台紙|同梱|専用|おまけ|ハンドメイド|類似|パロディ|非公式|(?<![仕同模])様")   # ○○様 = 특정 사람에게 맞춰 판 것
 CHJ=[ja for ja,_ in CH]
 MKT_FLOOR=0.4   # 정가의 40% 미만으로 팔린 건 다른 상품(미니 사이즈 등)일 가능성이 커서 뺌
 def norm(s): return re.sub(r"[\s　・/／&＆×()（）【】「」!！?？~～]+","",s)
@@ -521,15 +521,17 @@ def mkt_job(it):
         if want and not all(c in nm for c in want): continue
         if P["paren"] and low(P["paren"])[:6] not in n: continue
         if any(c in nm for c in others): continue
+        if P["src"] in ("collab","kuji") and want==["ちいかわ"] and nm.count("ちいかわ")<2 and "ちいかわギャル" not in nm: continue   # 'ちいかわ'는 브랜드 이름이기도 해서, 캐릭터 치이카와라고 한 번 더 적힌 매물만
+        if P["src"]=="collab" and re.search(r"109|まとめ|セット",nm): continue   # 109 갸루 콜라보 등 다른 콜라보·묶음
         try: p=int(x["price"])
         except Exception: continue
         if retail and P["src"]!="collab" and p<retail*MKT_FLOOR: continue   # 9090처럼 이름이 확실한 콜라보는 정가 아래로 팔린 것도 그대로 씀
         sold.append((int(x.get("updated") or x.get("created") or 0),p,str(x.get("id") or ""),nm[:60]))   # updated = 팔린 시각
     sold.sort(reverse=True)
-    top=sold[:3];last=[t[1] for t in top]
+    top=sold[:5 if P["src"]=="collab" else 3];last=[t[1] for t in top]   # 콜라보는 값이 들쭉날쭉해서 최근 5건
     base={"at":TODAY,"v":2,"src":P["src"]}
     if len(last)<3: return it["id"],{**base,"n":len(last)}
-    return it["id"],{**base,"p":int(statistics.median(last)),"lo":min(last),"hi":max(last),"r":last,"n":3,
+    return it["id"],{**base,"p":int(statistics.median(last)),"lo":min(last),"hi":max(last),"r":last,"n":len(last),
         "m":[[t[2],t[3],t[1]] for t in top]}   # 계산에 쓴 메루카리 매물 (화면에서 직접 확인용)
 
 def update_market(catalog,added,extra,market,limit):
