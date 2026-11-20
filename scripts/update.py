@@ -1,12 +1,12 @@
 """치이카와 위시 도감 자동 업데이트
-- 일본 공식샵(chiikawamarket.jp) / 나가노마켓(치이카와 캐릭터만)에서 도감에 없는 상품을 추가
+- 일본 공식샵(chiikawamarket.jp) / 나가노마켓(치이카와 캐릭터만) / 반다이 가챠(gashapon.jp)에서 도감에 없는 상품을 추가
 - 기존 상품의 품절/판매중 상태 갱신
 - 외부 사이트 사진을 쓰는 상품 중 공식몰에 같은 상품이 있으면 공식몰 사진으로
 - 품절 상품의 메루카리 시세 갱신: 공식몰(없으면 다른 공식) 일본어 이름, 9090·쿠지는 규칙으로 만든 검색어로 검색, 가장 최근 팔린 3개의 중간값 (하루 MKT_LIMIT개씩, 오래된 것부터)
 - 끝나면 data/bundle.js 를 다시 만듦
 사용: python scripts/update.py   (환경변수 MKT_LIMIT=200(기본), SKIP_MERCARI=1, SKIP_SHOP=1)
 """
-import unicodedata,datetime,json,os,re,sys,time,statistics,urllib.request,urllib.parse,colorsys,io
+import unicodedata,datetime,html,json,os,re,sys,time,statistics,urllib.request,urllib.parse,colorsys,io
 import concurrent.futures as cf
 ROOT=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0,os.path.join(ROOT,"scripts"))
@@ -255,6 +255,73 @@ def tracker_items(have,status):
                 "colors":[],"memo":"가격은 티몰에서 확인","available":bool(o.get("in")),"upcoming":False,"popRank":9999,"addedAt":TODAY})
     return out
 
+# ---------- 반다이 가챠 (gashapon.jp 공식 사이트의 'ちいかわ' 검색 결과) ----------
+GP_BASE="https://gashapon.jp/products/"
+def get_html(url,tries=3):
+    for a in range(tries):
+        try: return urllib.request.urlopen(urllib.request.Request(url,headers=UA),timeout=40).read().decode("utf-8","replace")
+        except Exception:
+            if a==tries-1: raise
+            time.sleep(3+a*4)
+def _gp_text(s): return re.sub(r"\s+"," ",html.unescape(re.sub(r"<[^>]+>"," ",s or ""))).strip()
+# 가챠 시리즈 이름은 번역기가 엉뚱하게 바꾸는 게 많아서 먼저 한국어로 바꿔 둠
+GP_KO=[("はさむんです。","하사문데스 "),("ならぶんです。","나라분데스 "),("つまんでつなげてますこっと","츠만데 츠나게테 마스코트"),("めじるしアクセサリー","메지루시 액세서리"),
+    ("みんなでもぐもぐパーティ","모두 함께 모구모구 파티"),("もぐもぐ","모구모구"),("ますこっと","마스코트"),("マスコット","마스코트"),("チャーム","참"),("スヤスヤ","새근새근 "),
+    ("びっくらたまご","빗쿠라타마고 "),("ヴィネットふれんず","비네트 프렌즈"),("ハグコット","허그코트 "),("カプセリウム","캡슐리움 "),("カプキャラ","캡캐라 "),
+    ("ジェムリーズ","젬리즈"),("でらっくす","디럭스"),("フラットガシャポン","플랫 가샤폰"),("ガシャポン","가샤폰"),("おふろ","목욕"),("ラバーマグネット","러버 마그넷"),("ラバーコースター","러버 코스터")]
+def _gp_tr(t):
+    for ja,ko in GP_KO: t=t.replace(ja,ko)
+    if not re.search(r"[぀-ヿ一-龥]",re.sub("|".join(j for j,_ in CH),"",t)):   # 남은 일본어가 캐릭터 이름뿐이면 번역기 없이
+        for ja,ko in CH: t=t.replace(ja,ko)
+        return re.sub(r"\s+"," ",t).strip(),"dict"
+    return translate(t)
+def _gp_chars(t):
+    """가챠 한 종의 이름에 나온 캐릭터 (앞에 나온 순서)"""
+    return [ko for _,ko in sorted((t.find(ja),ko) for ja,ko in CH if ja in t)]
+def _gp_ko(t):
+    return _gp_tr(t)[0]
+def gashapon_items(have):
+    """반다이 가챠: 라인업 하나를 캐릭터(한 종)별 상품으로 나눠서 넣음
+       id = gp-<JAN>~<번호>  · 상세 페이지 사진 title 이 그 종의 이름 (ちいかわ / ハチワレ …)"""
+    h=get_html(GP_BASE+"result.php?free="+urllib.parse.quote("ちいかわ"))
+    cards=re.findall(r'href="detail\.php\?jan_code=(\d+)".*?<img[^>]*src="([^"]+)".*?c-card__name">(.*?)</p>.*?c-card__price--main">([\d,]+)<',h,re.S)
+    out=[];seen=set()
+    for jan,thumb,name,price in cards:
+        name=_gp_text(name);base="gp-"+jan
+        if base in seen or "ちいかわ" not in name or "箱売" in name: continue   # 박스 판매는 같은 라인업 묶음이라 뺌
+        seen.add(base)
+        if base in have or any(x.startswith(base+"~") for x in have): continue
+        try: d=get_html(GP_BASE+"detail.php?jan_code="+jan)
+        except Exception as e:
+            print("가챠 상세 실패",jan,e);continue
+        txt=_gp_text(re.sub(r"<script.*?</script>|<style.*?</style>","",d,flags=re.S))
+        rel=re.search(r"発売時期\s*(\d{4})年\s*(\d{1,2})月",txt)
+        kinds=re.search(r"種類数\s*全\s*(\d+)\s*種",txt)
+        released=f"{rel.group(1)}.{int(rel.group(2)):02d}" if rel else ""
+        upcoming=bool(released) and released>TODAY[:7]
+        # 한 종씩: 사진 title 이 있는 것만 (첫 장은 단체 사진이라 title 이 비어 있음)
+        vars_=[];vs=set()
+        for src,ttl in re.findall(r'<img[^>]*src="(https://[^"]*/img/model/xl/[^"]+_(?:\d+)\.jpg)"[^>]*title="([^"]*)"',d):
+            ttl=html.unescape(ttl).strip()
+            if ttl and not re.search("イメージ|パッケージ",ttl) and src not in vs: vs.add(src);vars_.append((src,ttl))
+        og=re.search(r'og:image" content="([^"]+)"',d)
+        lineup_ko,src_=_gp_tr(name)
+        cat="키링" if "めじるし" in name else cat_of(name,"")
+        n=kinds.group(1) if kinds else str(len(vars_) or "")
+        common={"series":lineup_ko,"category":cat,"price":int(price.replace(",","")),"currency":"JPY","shop":"가챠","released":released,
+            "link":GP_BASE+"detail.php?jan_code="+jan,"colors":[],"available":not upcoming,"upcoming":upcoming,"popRank":9999,"addedAt":TODAY}
+        if not vars_:   # 종류별 사진이 없으면 라인업 하나로
+            chs=detect_chars(name)
+            out.append({"id":base,"name":lineup_ko,"nameSrc":src_,"nameJa":name,"character":chs[0] if len(chs)==1 else "모두 함께","chars":chs,
+                "img":og.group(1) if og else thumb,"memo":(f"전 {n}종 랜덤 · " if n else "")+"가챠 1회 가격",**common})
+        for k,(img,ttl) in enumerate(vars_,1):
+            chs=_gp_chars(ttl)
+            ch=chs[0] if len(chs)==1 else "모두 함께"   # 여러 캐릭터 또는 장면 이름(캐릭터를 모름)이면 '모두 함께'
+            out.append({"id":f"{base}~{k}","name":f"{lineup_ko} ({_gp_ko(ttl)})","nameSrc":src_,"nameJa":f"{name}（{ttl}）",
+                "character":ch,"chars":chs,"img":img,"memo":f"전 {n}종 중 1종 · 가챠 1회 가격",**common})
+        time.sleep(.5)
+    return out
+
 SETJ=re.compile(r"全\s*\d+\s*種|コンプ|ランダム|アソート|ブラインド|シークレット含")
 GROUPJ=re.compile(r"みんな|集合|大集合|トリオ|なかまたち|仲間たち|ファミリー")
 def is_set_or_group(title):
@@ -307,6 +374,12 @@ def update_shops(catalog,extra,added):
             for it,cols in zip(tm,ex.map(lambda i:colors_of(i["img"]) if i["img"] else [],tm)): it["colors"]=cols
         added+=tm
     except Exception as e: print("티몰 목록 실패",e)
+    try:
+        gp=gashapon_items(have);print("반다이 가챠 새 상품",len(gp))
+        with cf.ThreadPoolExecutor(8) as ex:
+            for it,cols in zip(gp,ex.map(lambda i:colors_of(i["img"]) if i["img"] else [],gp)): it["colors"]=cols
+        added+=gp
+    except Exception as e: print("반다이 가챠 목록 실패",e)
     print("새로 추가할 상품",len(new))
     with cf.ThreadPoolExecutor(4) as ex:
         items=list(ex.map(lambda a:to_item(*a),new))
