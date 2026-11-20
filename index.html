@@ -690,8 +690,8 @@ body{background:radial-gradient(1100px 520px at 0% -8%,#fde7ee 0%,rgba(253,231,2
 /* ───── 그라데이션 줄이고 캐릭터 대표색으로 ───── */
 body{background:#fbf8f6!important}
 .logo{background:var(--pink)!important;box-shadow:0 3px 8px color-mix(in srgb,var(--pink) 35%,transparent)!important}
-.bw small{color:var(--pink)!important}.bw b em{color:var(--tint)!important}
-.bw b em{background:none!important;-webkit-background-clip:initial!important;background-clip:initial!important;color:#e4859f!important}
+.bw small{color:var(--pink)!important}
+.bw b em{background:none!important;-webkit-background-clip:initial!important;background-clip:initial!important;color:var(--tint)!important;-webkit-text-fill-color:currentColor}
 .pgline .bar i{background:var(--pink)!important}
 .rs{background:#fff!important;border-color:var(--edge)!important}
 .rsdot{background:var(--pink)!important;box-shadow:0 0 0 4px var(--pink2)!important}
@@ -1265,8 +1265,8 @@ function renderTop(){
 const PAL={"치이카와":["#e98aa3","#d0698a","#fbe9ee","#fdf4f6"],"하치와레":["#6fa3d8","#4a82bd","#e6f0fa","#f3f8fd"],"우사기":["#e0b13a","#a87d0c","#fbf2d6","#fdf9ec"],"검은별":["#55555b","#3a3a3c","#ebebed","#f6f6f7"],"모몽가":["#a58ad6","#8467bf","#efe9fa","#f7f4fd"],"쿠리만쥬":["#bb8c62","#956a44","#f5ece3","#faf6f1"],"랏코":["#7f8d9b","#5f6c79","#eceff2","#f6f7f9"],"시사":["#ec8a3c","#c86d1e","#fcebdc","#fef6ee"],"후루혼야":["#d97b72","#bb5c53","#f9e8e6","#fcf4f3"]};
 function applyAccent(){const r=document.documentElement.style;const sk=document.documentElement.dataset.skin;
   /* 캐릭터를 고르지 않았을 때는 고른 웹 테마 색을 그대로 씀 (기본 테마면 예전처럼 치이카와 색) */
-  if(!PAL[state.char]&&sk&&sk!=="basic"){["--pink","--tint","--pink2","--pink3"].forEach(k=>r.removeProperty(k));return}
-  const p=PAL[state.char]||PAL["치이카와"];
+  if(sk&&sk!=="basic"){["--pink","--tint","--pink2","--pink3"].forEach(k=>r.removeProperty(k));return}
+  const p=PAL["치이카와"];   // 캐릭터를 눌러도 색은 그대로 (테마에서만 바뀜)
   r.setProperty("--pink",p[0]);r.setProperty("--tint",p[1]);r.setProperty("--pink2",p[2]);r.setProperty("--pink3",p[3]);
   const m=document.querySelector('meta[name="theme-color"]');if(m)m.content="#fbf8f6"}
 function renderFilters(){applyAccent();
