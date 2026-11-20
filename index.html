@@ -801,7 +801,7 @@ h1::after{display:none!important;content:none!important}
     <section class="widget" aria-label="지출 요약">
       <button type="button" class="wish" data-s="wish"><span class="k">위시 총금액</span><span class="v" id="sWish">0원</span><span class="s" id="sWishSub"></span></button>
       <button type="button" class="bought" data-s="bought"><span class="k">토벌 총금액</span><span class="v" id="sBought">0원</span><span class="s" id="sBoughtSub"></span></button>
-      <button type="button" class="saved" data-s="pass"><span class="k">참아서 아낀 돈</span><span class="v" id="sSaved">0원</span><span class="s" id="sSavedSub"></span></button>
+      <button type="button" class="saved" data-s="pass"><span class="k">방어로 아낀 돈</span><span class="v" id="sSaved">0원</span><span class="s" id="sSavedSub"></span></button>
     </section>
 
     <label class="searchbar psearch"><svg class="i sm"><use href="#i-search"/></svg><input id="q" type="search" placeholder="굿즈 검색" aria-label="굿즈 검색"></label>
@@ -1100,7 +1100,7 @@ const CHARS=["치이카와","하치와레","우사기","검은별","모몽가","
 const CATS=["마스코트","누이","피규어","키링","문구","생활","의류","기타"];
 const CAT_ALIAS={"인형·마스코트":"마스코트","누이·인형":"누이","키링·뱃지":"키링","생활·잡화":"생활","의류·가방":"의류","식품·과자":"기타","가챠·쿠지":"기타","쿠지·랜덤":"기타"};
 const COLORS=[["핑크","#ff9ec0"],["레드","#ff3b30"],["오렌지","#ff9500"],["옐로","#ffcc00"],["그린","#34c759"],["블루","#5ac8fa"],["네이비","#1d3a8a"],["퍼플","#af52de"],["베이지·브라운","#c9a27c"],["화이트","#ffffff"],["블랙·그레이","#8e8e93"]];
-const TABS=[["all","전체","grid"],["wish","위시","heart"],["bought","토벌","spear"],["pass","참음","shield"],["me","내 도감","spark"]];
+const TABS=[["all","전체","grid"],["wish","위시","heart"],["bought","토벌","spear"],["pass","방어","shield"],["me","내 도감","spark"]];
 const SORTS=[["pop","인기순 (플미 높은순)"],["rel_new","출시 최신순"],["rel_old","출시 오래된순"],["price","가격 높은순"],["cheap","가격 낮은순"],["new","최근 담은순"]];
 const VIEWS=[["card","card","grid","카드"],["dex","dex","dex","도감"],["list","list","list","리스트"]];
 const RATES={KRW:1,JPY:9.4,CNY:190};
@@ -1290,7 +1290,7 @@ function renderFilters(){applyAccent();
 const heartBtn=i=>readOnly||!(i.status==="cand"||i.status==="wish")?"":`<button type="button" class="hb" data-act="heart" aria-pressed="${i.status==="wish"}" aria-label="${i.status==="wish"?"위시에서 빼기":"위시에 담기"}">${ic("heart")}</button>`;
 const soldTag=i=>i.available===false&&i.status==="cand"?(i.upcoming?` · <span class="so" style="color:var(--b,#6f9bd1)">판매 예정</span>`:` · <span class="so">품절</span>`):"";
 const ownBtn=i=>readOnly||i.status==="pass"?"":`<button type="button" class="ob" data-act="own" aria-pressed="${i.status==="bought"}" aria-label="${i.status==="bought"?"토벌 취소":"토벌 완료로 표시"}">${ic("spear")}</button>`;
-const passBtn=i=>readOnly?"":i.status==="pass"?`<button type="button" class="hb pb" data-act="undo" aria-pressed="true" aria-label="참음 취소" title="참음 취소">${ic("shield")}</button>`:(i.status==="wish"&&state.status==="wish")?`<button type="button" class="hb pb" data-act="pass" aria-pressed="false" aria-label="참음" title="참음">${ic("shield")}</button>`:"";
+const passBtn=i=>readOnly?"":i.status==="pass"?`<button type="button" class="hb pb" data-act="undo" aria-pressed="true" aria-label="방어 취소" title="방어 취소">${ic("shield")}</button>`:(i.status==="wish"&&state.status==="wish")?`<button type="button" class="hb pb" data-act="pass" aria-pressed="false" aria-label="방어" title="방어">${ic("shield")}</button>`:"";
 const mkLinks=i=>{const lh=i.link&&safeUrl(i.link);const jq=mqOf(i);
   const a=lh?`<a class="ab go" href="${esc(lh)}" target="_blank" rel="noopener">${esc(i.linkLabel||"공식홈")}</a>`:"";
   const m=jq?`<a class="ab go mk" href="https://jp.mercari.com/search?keyword=${encodeURIComponent(jq)}" target="_blank" rel="noopener">메루카리</a>`:`<a class="ab go mk" href="https://m.bunjang.co.kr/search/products?q=${encodeURIComponent(bunjangQ(i))}" target="_blank" rel="noopener">번개장터</a>`;
@@ -1301,7 +1301,7 @@ function card(i,k){
   const rk=state.sort==="pop"&&rankOf(i)<2?`<span class="rk ${k<3?"top":""}">${k+1}위</span>`:"";
   let meta="";
   if(i.status==="wish")meta=`담은 지 ${daysSince(i.wishedAt||i.createdAt)}일`;
-  else if(i.status==="bought"||i.status==="pass"){const days=Math.max(0,Math.floor(((i.decidedAt||Date.now())-(i.wishedAt||i.createdAt||0))/86400000));meta=i.status==="pass"?`${days}일 버티고 참음`:`${i.released?esc(i.released)+" · ":""}토벌 완료`}
+  else if(i.status==="bought"||i.status==="pass"){const days=Math.max(0,Math.floor(((i.decidedAt||Date.now())-(i.wishedAt||i.createdAt||0))/86400000));meta=i.status==="pass"?`${days}일 버티고 방어`:`${i.released?esc(i.released)+" · ":""}토벌 완료`}
   else meta=esc(i.released||i.shop||"");
   return `<article class="card ${i.status==="pass"?"dim":""} ${i.status==="bought"?"own":""}" data-id="${esc(i.id)}" tabindex="0" role="button" aria-label="${esc(i.name)} 자세히 보기">
     <div class="ph"><span class="mono">${esc((i.character||"?").slice(0,1))}</span>${img}<span class="cat">${esc(catOf(i))}</span>${heartBtn(i)}${passBtn(i)}${ownBtn(i)}${rk}</div>
@@ -1330,12 +1330,12 @@ function dexCell(i){
 function listRow(i){
   const n=dexNo.get(i.id)||0;
   const rk=state.sort==="pop"&&rankOf(i)<2?`<span class="lrk">${n}위</span>`:"";
-  const stl={wish:"위시",bought:"토벌 완료",pass:"참음"}[i.status];
+  const stl={wish:"위시",bought:"토벌 완료",pass:"방어"}[i.status];
   let q="";
   if(!readOnly){
     if(i.status==="cand")q=`<button type="button" class="qb spear" data-act="bought" aria-label="토벌">${ic("spear","i")}</button><button type="button" class="qb hb" data-act="heart" aria-pressed="false" aria-label="위시에 담기">${ic("heart","i")}</button>`;
-    else if(i.status==="wish")q=`<button type="button" class="qb cartq" data-act="cart" aria-pressed="${!!i.cart}" aria-label="장바구니">${ic("cart","i")}</button><button type="button" class="qb spear" data-act="bought" aria-label="토벌">${ic("spear","i")}</button>${state.status==="wish"?`<button type="button" class="qb shield" data-act="pass" aria-label="참음">${ic("shield","i")}</button>`:""}<button type="button" class="qb hb" data-act="heart" aria-pressed="true" aria-label="위시에서 빼기">${ic("heart","i")}</button>`;
-    else q=`<button type="button" class="qb" data-act="undo" aria-label="${i.status==="bought"?"토벌 취소":"참음 취소"}">${ic("undo","i")}</button>`;
+    else if(i.status==="wish")q=`<button type="button" class="qb cartq" data-act="cart" aria-pressed="${!!i.cart}" aria-label="장바구니">${ic("cart","i")}</button><button type="button" class="qb spear" data-act="bought" aria-label="토벌">${ic("spear","i")}</button>${state.status==="wish"?`<button type="button" class="qb shield" data-act="pass" aria-label="방어">${ic("shield","i")}</button>`:""}<button type="button" class="qb hb" data-act="heart" aria-pressed="true" aria-label="위시에서 빼기">${ic("heart","i")}</button>`;
+    else q=`<button type="button" class="qb" data-act="undo" aria-label="${i.status==="bought"?"토벌 취소":"방어 취소"}">${ic("undo","i")}</button>`;
   }
   const meta=[i.released,i.shop].filter(Boolean).join(" · ")+soldTag(i);
   return `<div class="lrow" data-id="${esc(i.id)}" tabindex="0" role="button" aria-label="${esc(i.name)}"><div class="lth"><div class="art">${imgHtml(i)}</div></div>
@@ -1369,7 +1369,7 @@ function _render(){
     const t=TABS.find(x=>x[0]===state.status);
     const msg=filtered?["검색 결과 없음","검색어나 필터를 바꿔 보세요."]
       :state.status==="wish"?["아직 위시가 없어요","전체에서 진짜 갖고 싶은 것만 하트를 눌러 담아요."]
-      :state.status==="pass"?["아직 참은 굿즈가 없어요","위시에서 참음을 누르면 아낀 돈이 쌓여요."]
+      :state.status==="pass"?["아직 방어한 굿즈가 없어요","위시에서 방어를 누르면 아낀 돈이 쌓여요."]
       :state.status==="bought"?["아직 토벌한 굿즈가 없어요","손에 넣은 굿즈는 토벌로 옮겨요."]
       :state.status==="all"?["아직 굿즈가 없어요","+ 버튼으로 굿즈를 추가해요."]
       :["후보가 비어 있어요","+ 버튼으로 굿즈를 추가해요."];
@@ -1459,17 +1459,17 @@ function badgesOf(){
   const week=p.some(i=>((i.decidedAt||0)-(i.wishedAt||i.createdAt||0))>=7*864e5);
   return [
     ["첫 토벌","처음으로 굿즈를 토벌했어요","spear",b.length>=1],
-    ["참을성 새싹","처음으로 구매를 참았어요","shield",p.length>=1],
-    ["일주일 버티기","위시에 7일 넘게 두고 참았어요","shield",week],
-    ["참기 장인","구매를 10번 참았어요","shield",p.length>=10],
-    ["아낀 돈 10만원","참아서 10만원을 지켰어요","shield",saved>=100000],
+    ["방어 새싹","처음으로 구매를 방어했어요","shield",p.length>=1],
+    ["일주일 버티기","위시에 7일 넘게 두고 방어했어요","shield",week],
+    ["방어 장인","구매를 10번 방어했어요","shield",p.length>=10],
+    ["아낀 돈 10만원","방어해서 10만원을 지켰어요","shield",saved>=100000],
     ["토벌 10개","굿즈 10개를 토벌했어요","spear",b.length>=10],
     ["수집왕","굿즈 50개를 토벌했어요","spear",b.length>=50],
     ["3총사","치이카와·하치와레·우사기를 모두 토벌했어요","heart",has("치이카와")&&has("하치와레")&&has("우사기")],
     ["검은별 사랑","검은별 굿즈를 토벌했어요","spark",has("검은별")],
     ["핑크 러버","핑크 굿즈를 5개 토벌했어요","heart",pink>=5],
     ["라인업 완성","한 라인업을 전부 모았어요","grid",fullLine],
-    ["참음 우세","토벌보다 참은 게 더 많아요 (5개 이상)","shield",p.length>=5&&p.length>=b.length],
+    ["방어 우세","토벌보다 방어한 게 더 많아요 (5개 이상)","shield",p.length>=5&&p.length>=b.length],
   ];
 }
 function levelOf(){
@@ -1484,8 +1484,8 @@ function meLevel(){
   return `<section class="mecard lvcard"><div class="lvtop"><div><span class="mk">나의 토벌 레벨</span><h2>Lv. ${L.lv} <span>${L.name}</span></h2></div><span class="lvic">${ic("spear")}</span></div>
   <div class="xpbar"><i style="width:${Math.max(pct,2)}%"></i></div>
   <div class="xprow"><b>${fmt(L.xp)} / ${fmt(L.next)} XP</b><span>${L.max?"최고 레벨이에요!":`다음 레벨까지 ${fmt(L.next-L.xp)} XP`}</span></div>
-  <div class="lvstats"><div><b>${L.b}<small>개</small></b><span>수집 완료</span></div><div><b>${L.p}<small>개</small></b><span>구매 참기</span></div><div><b>${L.bd}<small>개</small></b><span>획득 배지</span></div></div>
-  <p class="xphint">토벌 +20 XP · 참기 +10 XP · 배지 +20 XP</p>
+  <div class="lvstats"><div><b>${L.b}<small>개</small></b><span>수집 완료</span></div><div><b>${L.p}<small>개</small></b><span>구매 방어</span></div><div><b>${L.bd}<small>개</small></b><span>획득 배지</span></div></div>
+  <p class="xphint">토벌 +20 XP · 방어 +10 XP · 배지 +20 XP</p>
   <div class="badges">${bs.map(([n,d,icn,on])=>`<div class="bdg ${on?"on":""}" title="${esc(d)}"><span class="bi">${ic(icn)}</span><b>${esc(n)}</b><small>${esc(d)}</small></div>`).join("")}</div></section>`;
 }
 function shelfItems(){return byStatus("bought").slice().sort((x,y)=>((x.shelf??1e9)-(y.shelf??1e9))||((x.decidedAt||0)-(y.decidedAt||0)))}
@@ -1510,7 +1510,7 @@ function meDiary(){
     cells+=`<button type="button" class="cd ${a.length?"has":""} ${ME.day===d?"sel":""} ${isNow&&now.getDate()===d?"today":""}" data-me="day" data-v="${d}" ${a.length?"":"disabled"}><span class="dn">${d}</span>${a.length?`<span class="th">${imgHtml(a[0])}</span>${a.length>1?`<span class="more2">+${a.length-1}</span>`:""}`:""}</button>`}
   const tc=topOf(b,i=>i.character),tk=topOf(b,catOf);
   const sel=ME.day&&by[ME.day]?`<div class="daylist"><b>${m+1}월 ${ME.day}일에 토벌한 굿즈</b>${by[ME.day].map(i=>`<div class="dl" data-id="${esc(i.id)}" role="button" tabindex="0"><span class="th">${imgHtml(i)}</span><span class="dt">${esc(i.name)}</span><span class="dp">${fmt(krw(i))}원</span></div>`).join("")}</div>`:"";
-  const sumBox=b.length||p.length?`<div class="msum"><div><span>이달의 토벌</span><b>${b.length}개 · ${fmt(b.reduce((s,i)=>s+(i.paid!=null?+i.paid:krw(i)),0))}원</b></div><div><span>이달 참은 돈</span><b class="g">${p.length}개 · ${fmt(sum(p))}원</b></div><div><span>가장 많이 모은 친구</span><b>${tc[0]?`${esc(tc[0][0])} (${tc[0][1]}개)`:"-"}</b></div><div><span>가장 많이 모은 종류</span><b>${tk[0]?`${esc(tk[0][0])} (${tk[0][1]}개)`:"-"}</b></div></div>`:`<p class="xphint">이 달에는 아직 토벌 기록이 없어요</p>`;
+  const sumBox=b.length||p.length?`<div class="msum"><div><span>이달의 토벌</span><b>${b.length}개 · ${fmt(b.reduce((s,i)=>s+(i.paid!=null?+i.paid:krw(i)),0))}원</b></div><div><span>이달 방어한 돈</span><b class="g">${p.length}개 · ${fmt(sum(p))}원</b></div><div><span>가장 많이 모은 친구</span><b>${tc[0]?`${esc(tc[0][0])} (${tc[0][1]}개)`:"-"}</b></div><div><span>가장 많이 모은 종류</span><b>${tk[0]?`${esc(tk[0][0])} (${tk[0][1]}개)`:"-"}</b></div></div>`:`<p class="xphint">이 달에는 아직 토벌 기록이 없어요</p>`;
   return `<section class="mecard"><div class="mehead"><h3>월간 토벌 일지</h3><div class="mnav"><button type="button" data-me="mon" data-v="-1" aria-label="이전 달">‹</button><b>${y}년 ${m+1}월</b><button type="button" data-me="mon" data-v="1" aria-label="다음 달">›</button></div></div>
   <div class="cal"><div class="wk">${["일","월","화","수","목","금","토"].map(w=>`<span>${w}</span>`).join("")}</div><div class="cg">${cells}</div></div>${sel}${sumBox}</section>`;
 }
@@ -1655,7 +1655,7 @@ $("list").addEventListener("click",async e=>{
       Object.assign(it,ch);quick(it);QUIET++;QUIET_UNTIL=Date.now()+2500;if(on)toast("토벌 완료!","spear");
       try{await writeItem({...it,status:prev},ch)}catch(err){it.status=prev;render();throw err}
       return}
-    if(act==="undo"){const back=it.from==="wish"?"wish":"cand";await writeItem(it,{status:back,decidedAt:null});toast((it.status==="bought"?"토벌":"참음")+" 취소 · "+(back==="wish"?"위시로 돌아갔어요":"원래대로 돌아갔어요"),"undo")}
+    if(act==="undo"){const back=it.from==="wish"?"wish":"cand";await writeItem(it,{status:back,decidedAt:null});toast((it.status==="bought"?"토벌":"방어")+" 취소 · "+(back==="wish"?"위시로 돌아갔어요":"원래대로 돌아갔어요"),"undo")}
     else{await writeItem(it,{status:act,decidedAt:Date.now(),from:it.status,cart:false});act==="pass"?toast(`${fmt(krw(it))}원 지켰어요`,"shield"):toast("토벌 완료","spear")}
   }catch(err){toast("저장하지 못했어요. 다시 눌러 주세요.");b.disabled=false}
 });
@@ -1672,10 +1672,10 @@ function renderCart(){
   const days=i=>Math.max(0,Math.floor((Date.now()-(i.cartAt||Date.now()))/86400000));
   B.innerHTML=Object.entries(shops).map(([sh,arr])=>`<div class="cshop"><div class="csh"><b>${esc(sh)}</b><span>${arr.length}개 · ${fmt(arr.reduce((s,i)=>s+effKrw(i),0))}원</span></div>
     ${arr.map(i=>`<div class="crow" data-cid="${esc(i.id)}"><div class="cth"><div class="art">${imgHtml(i)}</div></div><div class="ct"><span class="cn">${esc(i.name)}</span><span class="cp">${priceHtml(i)}</span><span class="cm">담은 지 ${days(i)}일${i.available===false?` · <span class="so">${i.upcoming?"판매 예정":"품절"}</span>`:""}</span></div>
-      <div class="cacts"><button type="button" class="cbt own" data-cact="bought" title="샀어요 (토벌)">${ic("spear","i sm")}</button><button type="button" class="cbt pass" data-cact="pass" title="참을래요">${ic("shield","i sm")}</button><button type="button" class="cbt rm" data-cact="rm" title="빼기" aria-label="장바구니에서 빼기">✕</button></div></div>`).join("")}</div>`).join("")+
+      <div class="cacts"><button type="button" class="cbt own" data-cact="bought" title="샀어요 (토벌)">${ic("spear","i sm")}</button><button type="button" class="cbt pass" data-cact="pass" title="방어할래요">${ic("shield","i sm")}</button><button type="button" class="cbt rm" data-cact="rm" title="빼기" aria-label="장바구니에서 빼기">✕</button></div></div>`).join("")}</div>`).join("")+
   `<div class="csum"><div class="cline"><span>상품 ${n}개</span><b>${fmt(tot)}원</b></div>
-   <p class="chint">${ic("shield","i sm")} 전부 참으면 <b>${fmt(tot)}원</b>을 아낄 수 있어요</p>
-   ${readOnly?"":`<div class="cbtns"><button type="button" class="cbig pass" data-call="pass">전부 참기</button><button type="button" class="cbig own" data-call="bought">전부 토벌 완료</button></div>`}</div>`;
+   <p class="chint">${ic("shield","i sm")} 전부 방어하면 <b>${fmt(tot)}원</b>을 아낄 수 있어요</p>
+   ${readOnly?"":`<div class="cbtns"><button type="button" class="cbig pass" data-call="pass">전부 방어</button><button type="button" class="cbig own" data-call="bought">전부 토벌 완료</button></div>`}</div>`;
 }
 $("cartBtn").onclick=()=>{$("cOverlay").hidden=false;renderCart()};
 $("cClose").onclick=()=>{$("cOverlay").hidden=true};
