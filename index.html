@@ -823,6 +823,21 @@ h1::after{display:none!important;content:none!important}
 .tb-tog svg{width:20px;height:20px}
 @keyframes tbin{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
 .tb-ph{grid-area:btns;visibility:hidden}
+
+/* 처음 들어올 때 최애 캐릭터 고르기 */
+.favov{position:fixed;inset:0;z-index:100;background:rgba(40,25,30,.38);display:grid;place-items:center;padding:20px;animation:favin .2s ease-out}
+.favov.bye{opacity:0;transition:opacity .2s}
+.favbox{width:min(380px,100%);max-height:calc(100dvh - 40px);overflow:auto;background:#fff;border-radius:24px;padding:22px 18px 18px;box-shadow:0 20px 50px rgba(0,0,0,.18)}
+.favbox > b{display:block;font-size:20px;font-weight:800;color:#2f2a2b;text-align:center}
+.favbox > p{margin:8px 0 16px;font-size:13.5px;line-height:1.55;color:#7d7477;text-align:center}
+.favbox .skins{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@keyframes favin{from{opacity:0}to{opacity:1}}
+
+.qsug{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:-4px 0 10px;padding:2px 1px;align-items:center}.qsug::-webkit-scrollbar{display:none}
+.qsug .qsl{flex:none;font-size:12px;font-weight:700;color:var(--label2);margin-right:2px}
+.qs{flex:none;display:inline-flex;align-items:center;gap:5px;height:32px;padding:0 12px;border-radius:999px;background:var(--pink3,#fff6f8);border:1px solid var(--edge);font-size:13px;font-weight:600;color:var(--label);white-space:nowrap}
+.qs small{font-size:11px;font-weight:700;color:var(--tint)}.qs i{font-style:normal;font-size:11.5px;color:var(--label2);font-weight:500}
+.qs.w{background:#fff}.qs:hover{border-color:var(--pink)}
 </style>
 </head>
 <body>
@@ -861,7 +876,7 @@ h1::after{display:none!important;content:none!important}
         <button class="iconbtn" id="userBtn" type="button" aria-label="로그인"><svg class="i"><use href="#i-user"/></svg></button>
         <button class="iconbtn" id="cartBtn" type="button" aria-label="장바구니"><svg class="i"><use href="#i-cart"/></svg></button>
         <button class="iconbtn" id="shareBtn" type="button" aria-label="공유하기" hidden><svg class="i"><use href="#i-share"/></svg></button>
-        <button class="iconbtn" id="skinBtn" type="button" aria-label="테마 바꾸기" aria-expanded="false" aria-controls="skinPop"><svg class="i"><use href="#i-palette"/></svg></button>
+        <button class="iconbtn" id="skinBtn" type="button" aria-label="최애 캐릭터 바꾸기" aria-expanded="false" aria-controls="skinPop"><svg class="i"><use href="#i-palette"/></svg></button>
         <button class="iconbtn" id="addBtn" type="button" aria-label="직접 추가"><svg class="i"><use href="#i-plus"/></svg></button>
       </div>
       <div class="tb-title"><div class="mbrand"><span class="logo"><svg class="i"><use href="#i-spear"/></svg></span><span class="bw"><small>WISH DOGAM</small><b><em>치이카와</em> 위시 도감</b></span></div><h1 id="title">전체</h1><p class="subtitle" id="subtitle"></p></div>
@@ -875,7 +890,8 @@ h1::after{display:none!important;content:none!important}
       <button type="button" class="saved" data-s="pass"><span class="k">방어로 아낀 돈</span><span class="v" id="sSaved">0원</span><span class="s" id="sSavedSub"></span></button>
     </section>
 
-    <label class="searchbar psearch"><svg class="i sm"><use href="#i-search"/></svg><input id="q" type="search" placeholder="굿즈 검색" aria-label="굿즈 검색"></label>
+    <label class="searchbar psearch"><svg class="i sm"><use href="#i-search"/></svg><input id="q" type="search" placeholder="굿즈 검색 (예: 인어섬, 마법, 가챠)" aria-label="굿즈 검색"></label>
+    <div class="qsug" id="qSug" hidden></div>
     <div class="friends" id="charSeg"></div>
     <div class="fbar" id="fbar"></div>
     <div class="viewbar"><label class="sortwrap"><svg class="i sm"><use href="#i-sort"/></svg><select id="sortSel" aria-label="정렬"></select></label><div class="seg vseg" id="viewSeg" role="group" aria-label="보기 방식"></div></div>
@@ -1195,7 +1211,7 @@ const MAIN_CHARS=["치이카와","하치와레","우사기"];
 const hasChar=(i,c)=>i.character===c;
 let CAT={items:[],rank:{},grid:10,jpTotal:10406},dbItems=[],catIds=new Set();
 const SHOP_SIZE={"일본 공식몰":()=>CAT.jpTotal||10406,"대원샵":()=>49};
-const rankOf=i=>{let r=CAT.rank[i.id];if(!r)r=(i.shop==="일본 공식몰"&&!i.spr)?0:i.popRank;const sz=SHOP_SIZE[i.shop];return r&&sz?r/sz():2};
+const rankOf=i=>{const sh=i.shop0||i.shop;let r=CAT.rank[i.id];if(!r)r=(sh==="일본 공식몰"&&!i.spr)?0:i.popRank;const sz=SHOP_SIZE[sh];return r&&sz?r/sz():2};
 const imgOf=i=>{const p=String(i.photo||"");return /^(data:|https?:)/.test(p)?p:(i.img||"")};
 function imgHtml(i){const src=imgOf(i);if(src)return `<img src="${esc(src)}" alt="" loading="lazy" onerror="this.remove()">`;
   if(i.spr){const g=CAT.grid||10,k=i.spr[1],x=(k%g)*100/(g-1),y=Math.floor(k/g)*100/(g-1);return `<div class="spr" style="background-image:url(sp/m${+i.spr[0]}.jpg);background-position:${x}% ${y}%"></div>`}return ""}
@@ -1209,7 +1225,7 @@ const isJp=i=>i.currency==="JPY"||/^(jp|ng|pk)-/.test(i.id||"");
 /* 메루카리 검색어: 공식 일본어 이름 그대로 (일본어 이름이 없으면 메루카리 버튼을 숨김 — 「ちいかわ マスコット」 같은 대충 만든 검색어는 엉뚱한 게 나와서)
    옵션별로 쪼갠 상품(이름 끝이 （全6種） 등)은 그 부분 대신 캐릭터 이름 */
 const SETP=/[（(]\s*(全\s*\d+\s*種|ランダム|アソート|ブラインド|BOX|ボックス)[^）)]*[）)]\s*$/i;
-const mqOf=i=>{if(i.mkq)return i.mkq;let j=i.nameJa||"";if(!/[ぁ-ヿ]/.test(j))return "";   // 9090·쿠지는 업데이트가 만든 검색어(mkq)
+const mqOf=i=>{if(i.mkq)return i.mkq;let j=i.nameJa||"";if(!/[ぁ-ヿ]/.test(j)){if(i.currency==="JPY"||/^(jp|ng|pk)-/.test(i.id||"")){const c=JCH[i.character]||"",k={"마스코트":"マスコット","누이":"ぬいぐるみ","피규어":"フィギュア","키링":"キーホルダー"}[i.category]||"";return ("ちいかわ "+(c==="ちいかわ"?"":c)+" "+k).replace(/\s+/g," ").trim()}return ""}   // 9090·쿠지는 업데이트가 만든 검색어(mkq)
  
   if(SETP.test(j)){const c=((i.chars&&i.chars.length)?i.chars:[i.character]).map(x=>JCH[x]).filter(Boolean).join(" ");j=j.replace(SETP,c?" "+c:"")}
   return mercariQ(j)};
@@ -1244,8 +1260,8 @@ function renderLineup(it){const el=$("fLineup");renderSeriesRel(it);
   el.hidden=false;
   el.innerHTML=`<div class="lh"><b>같은 라인업</b><span>${a.length}종 중 ${b}종 토벌</span></div><div class="meter"><i style="width:${b/a.length*100}%"></i></div><div class="lgrid">${a.map(x=>`<button type="button" class="lc ${x.id===it.id?"cur":""} ${x.status==="bought"?"own":""}" data-lid="${esc(x.id)}" style="--cc:${CH_COLOR[x.character]||"#d1d1d6"}"><span class="lb"><span class="art">${imgHtml(x)}</span>${x.status==="bought"?`<span class="lo">${ic("spear","i sm")}</span>`:x.status==="wish"?`<span class="lo w">${ic("heart","i sm")}</span>`:""}</span><span class="ll">${x.id===it.id?"보는 중":esc(x.character||"")}</span></button>`).join("")}</div>`;
 }
-const SHOPN={"티몰 공식몰":"중국 공식몰 (티몰)","미니소":"미니소 (중국)","대원샵":"대원미디어 (한국 공식)","대원미디어 (네이버)":"대원미디어 (한국 공식)","특전":"특전·비매품","특전(비매품)":"특전·비매품","영화관 입장 특전":"특전·비매품","경품(프라이즈)":"경품 (프라이즈)","모구모구 혼포 (오타루 베이비 카스테라점)":"모구모구 혼포","홍콩 한정":"홍콩·대만 한정","대만 한정":"홍콩·대만 한정","기타 콜라보·이벤트":"콜라보·기타","산리오 콜라보 (기타)":"콜라보·기타","기타 (공식몰 외)":"콜라보·기타","지역 한정":"콜라보·기타"};
-const SHOP_GROUPS=[["일본",["일본 공식몰","치이카와 포켓 스토어","나가노 마켓","모구모구 혼포","돈키호테","9090"]],["뽑기·경품·특전",["가챠","이치방쿠지·쿠지","경품 (프라이즈)","반다이 식완","특전·비매품"]],["한국",["대원미디어 (한국 공식)","한국 한정"]],["중국·대만·홍콩",["중국 공식몰 (티몰)","미니소 (중국)","중국 한정","홍콩·대만 한정"]],["그 밖에",["콜라보·기타","지난 굿즈"]]];
+const SHOPN={"일본 공식몰":"일치마 (일본 공식)","나가노 마켓":"나가노마켓","치이카와 포켓 스토어":"치이카와 포켓","이치방쿠지·쿠지":"쿠지 (이치방쿠지 등)","티몰 공식몰":"중국 공식몰 (티몰·타오바오)","미니소":"미니소 (중국)","대원샵":"대원미디어 (한국 공식)","대원미디어 (네이버)":"대원미디어 (한국 공식)","특전":"특전·비매품","특전(비매품)":"특전·비매품","영화관 입장 특전":"특전·비매품","경품(프라이즈)":"경품 (프라이즈)","모구모구 혼포 (오타루 베이비 카스테라점)":"모구모구 혼포","홍콩 한정":"홍콩·대만 한정","대만 한정":"홍콩·대만 한정","기타 콜라보·이벤트":"콜라보·기타","산리오 콜라보 (기타)":"콜라보·기타","기타 (공식몰 외)":"콜라보·기타","지역 한정":"콜라보·기타"};
+const SHOP_GROUPS=[["일본",["일치마 (일본 공식)","치이카와 포켓","나가노마켓","모구모구 혼포","돈키호테","9090"]],["뽑기·경품·특전",["가챠","쿠지 (이치방쿠지 등)","경품 (프라이즈)","반다이 식완","특전·비매품"]],["한국",["대원미디어 (한국 공식)","한국 한정"]],["중국·대만·홍콩",["중국 공식몰 (티몰·타오바오)","미니소 (중국)","중국 한정","홍콩·대만 한정"]],["그 밖에",["콜라보·기타","지난 굿즈"]]];
 const normDate=r=>{const m=String(r||"").match(/(\d{4})[.\-/년 ]*(\d{1,2})?/);return m?m[1]+"."+String(m[2]||"01").padStart(2,"0"):""};
 const DESC=["name","nameJa","img","spr","price","currency","noPrice","priceEst","estKind","series","released","category","character","chars","shop","link","linkLabel","available","upcoming","popRank"];
 let CATMAP=null,HID=null,EXMAP=null;
@@ -1258,7 +1274,7 @@ function merge(){if(!CATMAP||CATMAP.size!==CAT.items.length)CATMAP=new Map(CAT.i
   const rows=SRC.filter(i=>i.status!=="hidden"&&!(i.status==="cand"&&HID.has(i.id))).map(i=>{const c=CATMAP.get(i.id)||exOf(i.id);if(!c)return i;const o={...i};
     DESC.forEach(k=>{if(k in c&&!(k==="img"&&String(i.img||"").startsWith("img/")))o[k]=c[k];else if(k==="link"&&!c.link&&/tobeol\.com/.test(i.link||""))o.link=""});return o});
   state.items=rows.concat(CAT.items.filter(i=>!ids.has(i.id)).map(i=>({...i,status:"cand",_cat:true})));
-  state.items.forEach(i=>{const n=SHOPN[i.shop];if(n)i.shop=n});if(state.shop!=="all"&&SHOPN[state.shop])state.shop=SHOPN[state.shop];
+  state.items.forEach(i=>{const n=SHOPN[i.shop];if(n){i.shop0=i.shop;i.shop=n}});if(state.shop!=="all"&&SHOPN[state.shop])state.shop=SHOPN[state.shop];
   const rd=new Map();state.items.forEach(i=>{if(i.released){const k=lineKeyKo(i);if(k){const o=rd.get(k);if(!o||i.released<o)rd.set(k,i.released)}}});
   state.items.forEach(i=>{if(!i.released){const k=lineKeyKo(i);if(k&&rd.has(k)){i.released=rd.get(k);i._relGuess=true}}})}
 async function writeItem(it,changes){const ref=db.collection("wishes").doc(it.id);
@@ -1274,7 +1290,7 @@ const daysSince=t=>t?Math.max(0,Math.floor((Date.now()-t)/86400000)):0;
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function toast(msg,icon){const t=$("toast");t.innerHTML=(icon?ic(icon,"i sm"):"")+`<span>${esc(msg)}</span>`;t.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(()=>t.hidden=true,2000)}
 const safeUrl=s=>{try{const u=new URL(s);return /^https?:$/.test(u.protocol)?u.href:""}catch(e){return ""}};
-const shopTag=i=>i.shop==="대원샵"?"대원샵":"";
+const shopTag=i=>(i.shop0||i.shop)==="대원샵"?"대원샵":"";
 let MKT={};
 const soldOut=i=>i.available===false&&!i.upcoming;
 const mkt=i=>soldOut(i)&&MKT[i.id]&&MKT[i.id].p&&!MKT[i.id].chk?MKT[i.id]:null;   // chk: 같은 라인업보다 너무 비싸서 확인이 필요한 값
@@ -1289,8 +1305,21 @@ const byStatus=st=>st==="all"?state.items:state.items.filter(i=>i.status===st);
 const HAY=new WeakMap(),QN={raw:null,v:""};
 /* 검색 표기 차이 흡수: 야끼=야키, 쿠리만쥬=쿠리만주, 토끼=우사기, 가르마=하치와레 … */
 const SYNS=[["토끼","우사기"],["가르마","하치와레"],["하늘다람쥐","모몽가"],["밤만주","쿠리만주"],["밤만쥬","쿠리만주"],["해달","랏코"],["라코","랏코"],["먼작귀","치이카와"],["농담곰","나가노곰"],["키링","키홀더"],["뱃지","배지"],["봉제인형","인형"],["누이","인형"]];
+/* 검색 넓히기: 한국어 ↔ 일본어·비슷한 말도 같이 찾기 */
+const QEXP={"인어섬":["인어섬","人魚の島"],"인어":["인어","人魚","マーメイド"],"영화":["영화","映画","극장판"],"극장판":["극장판","영화","映画"],"마법":["마법","魔法","マジカル","매지컬"],"매지컬":["매지컬","マジカル","마법"],"크리스마스":["크리스마스","クリスマス","xmas"],"할로윈":["할로윈","ハロウィン","핼러윈"],"산리오":["산리오","サンリオ","sanrio"],"파자마":["파자마","パジャマ","잠옷"],"잠옷":["잠옷","파자마","パジャマ"],"라멘":["라멘","ラーメン","라면"],"스시":["스시","寿司","すし","초밥"],"초밥":["초밥","스시","寿司"],"벚꽃":["벚꽃","桜","さくら","사쿠라"],"생일":["생일","誕生日","バースデー","birthday"],"여름":["여름","夏","サマー","썸머"],"썸머":["썸머","여름","サマー"],"겨울":["겨울","冬","윈터"],"포켓":["포켓","ポケット"],"가챠":["가챠","ガチャ","가샤폰","ガシャポン"],"쿠지":["쿠지","くじ","제일복권","이치방"],"경품":["경품","プライズ","프라이즈"],"파크":["파크","パーク"],"클리닉":["클리닉","クリニック","병원"],"레스토랑":["레스토랑","レストラン"],"베이커리":["베이커리","ベーカリー","빵"],"수족관":["수족관","水族館"],"온천":["온천","温泉"],"도쿄":["도쿄","東京"],"오사카":["오사카","大阪"],"교토":["교토","京都"],"홋카이도":["홋카이도","北海道"],"오키나와":["오키나와","沖縄"],"천사":["천사","天使"],"악마":["악마","悪魔"],"요정":["요정","妖精","フェアリー","페어리"],"페어리":["페어리","フェアリー","요정"],"아기":["아기","baby","베이비"],"베이비":["베이비","baby","아기"],"일치마":["일치마","일본공식몰"],"치이카와마켓":["치이카와마켓","일본공식몰"],"대원":["대원"],"티몰":["티몰"],"타오바오":["타오바오","티몰"],"미니소":["미니소","miniso"],"돈키":["돈키","돈키호테"],"맥도날드":["맥도날드","해피밀","マクドナルド"],"키티":["키티","キティ","kitty"]};
+const qexp=t=>{const out=new Set([t]);for(const [k,v] of Object.entries(QEXP)){const kn=qnorm(k);if(t===kn||(t.length>=2&&kn.startsWith(t))||t.includes(kn))v.forEach(x=>out.add(qnorm(x)))}return [...out]};
+/* 연관 검색어: 검색어에 맞는 시리즈·판매처·종류를 칩으로 */
+function renderQSug(){const el=$("qSug");if(!el)return;const q=(state.q||"").trim();if(!q){el.hidden=true;el.innerHTML="";return}
+  const toks=q.split(/\s+/).map(qnorm).filter(Boolean).map(qexp);const hit=n=>{const h=qnorm(n);return toks.every(a=>a.some(t=>h.includes(t)))};
+  const sc={},sh={};state.items.forEach(i=>{const s=seriesOf(i);if(s&&hit(s))sc[s]=(sc[s]||0)+1;if(i.shop&&hit(i.shop))sh[i.shop]=(sh[i.shop]||0)+1});
+  const a=Object.entries(sc).sort((x,y)=>y[1]-x[1]).slice(0,6).map(([n,c])=>`<button type="button" class="qs" data-qs="series" data-v="${esc(n)}"><small>시리즈</small>${esc(n)}<i>${c}</i></button>`)
+    .concat(Object.entries(sh).sort((x,y)=>y[1]-x[1]).slice(0,3).map(([n,c])=>`<button type="button" class="qs" data-qs="shop" data-v="${esc(n)}"><small>판매처</small>${esc(n)}<i>${c}</i></button>`));
+  const rel=new Set();toks.forEach(al=>al.forEach(x=>{}));for(const [k,v] of Object.entries(QEXP)){if(toks.some(al=>al.includes(qnorm(k))))v.filter(x=>/[가-힣]/.test(x)&&qnorm(x)!==qnorm(q)).forEach(x=>rel.add(x))}
+  const b=[...rel].slice(0,4).map(x=>`<button type="button" class="qs w" data-qs="q" data-v="${esc(x)}">${esc(x)}</button>`);
+  if(!a.length&&!b.length){el.hidden=true;el.innerHTML="";return}
+  el.hidden=false;el.innerHTML=`<span class="qsl">연관</span>`+a.concat(b).join("")}
 const qnorm=t=>{t=t.toLowerCase().replace(/\s+/g,"");SYNS.forEach(([a,b])=>{t=t.split(a).join(b)});return t.replace(/끼/g,"키").replace(/쥬/g,"주").replace(/츄/g,"추").replace(/쮸/g,"추").replace(/[·・\-_()（）\[\]]/g,"")};
-const hayOf=i=>{let h=HAY.get(i);if(h===undefined||h.n!==i.name){h={n:i.name,v:(i.name+(i.nameJa||"")+(i.nameZh||"")+seriesOf(i)+catOf(i)+(i.memo||"")+(i.colors||[]).join("")+(i.character||"")+(i.shop||""))+" "};h.v=qnorm(h.v);HAY.set(i,h)}return h.v};
+const hayOf=i=>{let h=HAY.get(i);if(h===undefined||h.n!==i.name){h={n:i.name,v:(i.name+(i.nameJa||"")+(i.nameZh||"")+seriesOf(i)+catOf(i)+(i.memo||"")+(i.colors||[]).join("")+(i.character||"")+(i.shop||"")+(i.mkq||""))+" "};h.v=qnorm(h.v);HAY.set(i,h)}return h.v};
 function match(i,skip){
   if(state.status!=="all"&&i.status!==state.status&&!KEEP.has(i.id))return false;
   if(skip!=="shop"&&state.shop!=="all"&&(i.shop||"직접 추가")!==state.shop)return false;
@@ -1298,7 +1327,7 @@ function match(i,skip){
   if(skip!=="cat"&&state.cat!=="all"&&catOf(i)!==state.cat)return false;
   if(skip!=="color"&&state.color!=="all"&&!(i.colors||[]).includes(state.color))return false;
   if(skip!=="char"&&state.char!=="all"&&!hasChar(i,state.char))return false;
-  if(state.q){if(QN.raw!==state.q){QN.raw=state.q;QN.v=state.q.trim().split(/\s+/).map(qnorm).filter(Boolean)}const hv=hayOf(i);if(!QN.v.every(t=>hv.includes(t)))return false}
+  if(state.q){if(QN.raw!==state.q){QN.raw=state.q;QN.v=state.q.trim().split(/\s+/).map(qnorm).filter(Boolean).map(qexp)}const hv=hayOf(i);if(!QN.v.every(alts=>alts.some(t=>hv.includes(t))))return false}
   return true;
 }
 let VISC=null;const GK=new WeakMap();
@@ -1382,7 +1411,7 @@ const soldTag=i=>i.available===false&&i.status==="cand"?(i.upcoming?` · <span c
 const ownBtn=i=>readOnly||i.status==="pass"?"":`<button type="button" class="ob" data-act="own" aria-pressed="${i.status==="bought"}" aria-label="${i.status==="bought"?"토벌 취소":"토벌 완료로 표시"}">${ic("spear")}</button>`;
 const passBtn=i=>readOnly?"":i.status==="pass"?`<button type="button" class="hb pb" data-act="undo" aria-pressed="true" aria-label="방어 취소" title="방어 취소">${ic("shield")}</button>`:(i.status==="wish"&&state.status==="wish")?`<button type="button" class="hb pb" data-act="pass" aria-pressed="false" aria-label="방어" title="방어">${ic("shield")}</button>`:"";
 const mkLinks=i=>{const lh=i.link&&safeUrl(i.link);const jq=mqOf(i);
-  const a=lh?`<a class="ab go" href="${esc(lh)}" target="_blank" rel="noopener">${esc(i.linkLabel||"공식홈")}</a>`:"";
+  const a=lh?`<a class="ab go" href="${esc(lh)}" target="_blank" rel="noopener">${esc(i.linkLabel||((i.shop0||i.shop)==="일본 공식몰"?"일치마":(i.shop0||i.shop)==="나가노 마켓"?"나가노마켓":"공식홈"))}</a>`:"";
   const m=jq?`<a class="ab go mk" href="https://jp.mercari.com/search?keyword=${encodeURIComponent(jq)}" target="_blank" rel="noopener">메루카리</a>`:`<a class="ab go mk" href="https://m.bunjang.co.kr/search/products?q=${encodeURIComponent(bunjangQ(i))}" target="_blank" rel="noopener">번개장터</a>`;
   const c=readOnly||i.status==="bought"||i.status==="pass"?"":`<button type="button" class="ab cb2" data-act="cart" aria-pressed="${!!i.cart}" aria-label="${i.cart?"장바구니에서 빼기":"장바구니에 담기"}" title="${i.cart?"장바구니에서 빼기":"장바구니에 담기"}">${ic("cart","i sm")}</button>`;
   return a+m+c};
@@ -1446,7 +1475,7 @@ function reveal(){
   clearTimeout(revSafe);revSafe=setTimeout(()=>{document.querySelectorAll("#list .rv:not(.in)").forEach((el,i)=>{const r=el.getBoundingClientRect();if(r.top<innerHeight&&r.bottom>0){revIO.unobserve(el);revShow(el,i)}})},350);
 }
 addEventListener("scroll",()=>{clearTimeout(revSafe);revSafe=setTimeout(()=>{document.querySelectorAll("#list .rv:not(.in)").forEach((el,i)=>{const r=el.getBoundingClientRect();if(r.top<innerHeight&&r.bottom>0){revIO&&revIO.unobserve(el);revShow(el,i)}})},300)},{passive:true,capture:true});
-function render(){const m=document.querySelector(".main"),a=m?m.scrollTop:0,b=window.scrollY;VISC=null;INR=true;try{_render()}finally{INR=false;VISC=null}renderCart();reveal();if(m)m.scrollTop=a;window.scrollTo(0,b)}
+function render(){try{renderQSug()}catch(_){}const m=document.querySelector(".main"),a=m?m.scrollTop:0,b=window.scrollY;VISC=null;INR=true;try{_render()}finally{INR=false;VISC=null}renderCart();reveal();if(m)m.scrollTop=a;window.scrollTo(0,b)}
 function _render(){
   renderTop();renderFilters();
   const L=$("list");
@@ -1498,7 +1527,7 @@ function restockHTML(){
   const wishHit=A.some(x=>rsDay(x.at)===rsDay((A[0]||{}).at||"")&&(x.ids||[]).some(id=>(byId.get(id)||{}).status==="wish"));
   let body="";
   if(RS.open){
-    const seg=hasKr?`<div class="seg2 rsseg"><button type="button" data-rs="src" data-v="jp" aria-pressed="${src==="jp"}">일본 공식몰</button><button type="button" data-rs="src" data-v="kr" aria-pressed="${src==="kr"}">대원미디어</button></div>`:"";
+    const seg=hasKr?`<div class="seg2 rsseg"><button type="button" data-rs="src" data-v="jp" aria-pressed="${src==="jp"}">일치마</button><button type="button" data-rs="src" data-v="kr" aria-pressed="${src==="kr"}">대원미디어</button></div>`:"";
     if(RS.all){
       body=seg+days.map(d=>{const c=rsCards(a.filter(x=>rsDay(x.at)===d),byId);return `<h4 class="rsdh">${rsLabel(d)} <small>${c.length}개</small></h4><div class="rsgrid">${c.join("")}</div>`}).join("");
     }else{
@@ -1518,13 +1547,18 @@ const rsClick=e=>{const b=e.target.closest("[data-rs]");if(!b)return;e.stopImmed
 $("list").addEventListener("click",rsClick,true);
 $("rsTop").addEventListener("click",rsClick,true);
 /* 웹 테마: 이 기기에 기억 */
-const SKINS={"basic":["기본","#dc7896","#fbf8f6","#c95f80","치이카와"],"chiikawa":["치이카와","#f08fa8","#fff8f9","#c95f80","치이카와"],"hachiware":["하치와레","#6fa3e6","#f4f7fb","#3f74b8","하치와레"],"usagi":["우사기","#e9b73b","#fffcf2","#a87a0a","우사기"],"momonga":["모몽가","#a28ad9","#f8f6fc","#6c55b0","모몽가"],"kurimanju":["쿠리만쥬","#b98552","#faf7f3","#7f5530","쿠리만쥬"],"shisa":["시사","#ee8a3a","#fff8f2","#b85a12","시사"],"rakko":["랏코","#7f8fa1","#f5f6f8","#4d5f73","랏코"]};
+const SKINS={"chiikawa":["치이카와","#f08fa8","#fff8f9","#c95f80","치이카와"],"hachiware":["하치와레","#6fa3e6","#f4f7fb","#3f74b8","하치와레"],"usagi":["우사기","#e9b73b","#fffcf2","#a87a0a","우사기"],"momonga":["모몽가","#a28ad9","#f8f6fc","#6c55b0","모몽가"],"kurimanju":["쿠리만쥬","#b98552","#faf7f3","#7f5530","쿠리만쥬"],"shisa":["시사","#ee8a3a","#fff8f2","#b85a12","시사"],"rakko":["랏코","#7f8fa1","#f5f6f8","#4d5f73","랏코"]};
 const SKPAT={"chiikawa": "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cpath transform='translate%286 6%29 scale%28.42%29' d='M10 17s-7-4.4-7-9.2A3.8 3.8 0 0 1 10 6a3.8 3.8 0 0 1 7 1.8C17 12.6 10 17 10 17z' fill='%23f08fa8' opacity='.32'/%3E%3Cpath transform='translate%2830 30%29 scale%28.42%29' d='M10 17s-7-4.4-7-9.2A3.8 3.8 0 0 1 10 6a3.8 3.8 0 0 1 7 1.8C17 12.6 10 17 10 17z' fill='%23f08fa8' opacity='.20'/%3E%3C/svg%3E\")", "hachiware": "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Ccircle cx='10' cy='10' r='2.2' fill='%236fa3e6' opacity='.32'/%3E%3Ccircle cx='34' cy='34' r='2.2' fill='%236fa3e6' opacity='.20'/%3E%3Cpath d='M34 8q4 4 8 0' stroke='%236fa3e6' stroke-width='1.6' fill='none' opacity='.26' stroke-linecap='round'/%3E%3C/svg%3E\")", "usagi": "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cpath transform='translate%2812 12%29' d='M0 -4 L1.2 -1.2 L4 0 L1.2 1.2 L0 4 L-1.2 1.2 L-4 0 L-1.2 -1.2Z' fill='%23e9b73b' opacity='.30'/%3E%3Cpath transform='translate%2836 34%29' d='M0 -3 L0.8999999999999999 -0.8999999999999999 L3 0 L0.8999999999999999 0.8999999999999999 L0 3 L-0.8999999999999999 0.8999999999999999 L-3 0 L-0.8999999999999999 -0.8999999999999999Z' fill='%23e9b73b' opacity='.29'/%3E%3C/svg%3E\")", "momonga": "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cpath transform='translate%2812 10%29' d='M0 -3.4 L1.02 -1.02 L3.4 0 L1.02 1.02 L0 3.4 L-1.02 1.02 L-3.4 0 L-1.02 -1.02Z' fill='%23a28ad9' opacity='.29'/%3E%3Ccircle cx='36' cy='34' r='1.8' fill='%23a28ad9' opacity='.32'/%3E%3Ccircle cx='40' cy='12' r='1.2' fill='%23a28ad9' opacity='.29'/%3E%3C/svg%3E\")", "kurimanju": "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cellipse cx='12' cy='12' rx='4' ry='3.2' fill='%23b98552' opacity='.26'/%3E%3Cellipse cx='36' cy='34' rx='3' ry='2.4' fill='%23b98552' opacity='.19'/%3E%3C/svg%3E\")", "shisa": "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Ccircle cx='17.0' cy='12.0' r='2.6' fill='%23ee8a3a' opacity='.23'/%3E%3Ccircle cx='13.545261208414233' cy='16.755225315142297' r='2.6' fill='%23ee8a3a' opacity='.23'/%3E%3Ccircle cx='7.955132880891927' cy='14.939226086703497' r='2.6' fill='%23ee8a3a' opacity='.23'/%3E%3Ccircle cx='7.9545882906465915' cy='9.061523506674533' r='2.6' fill='%23ee8a3a' opacity='.23'/%3E%3Ccircle cx='13.544380004496658' cy='7.2444884185073315' r='2.6' fill='%23ee8a3a' opacity='.23'/%3E%3Ccircle cx='36' cy='34' r='2' fill='%23ee8a3a' opacity='.23'/%3E%3C/svg%3E\")", "rakko": "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cpath d='M4 14q5-5 10 0t10 0' stroke='%237f8fa1' stroke-width='1.6' fill='none' opacity='.29' stroke-linecap='round'/%3E%3Cpath d='M26 38q5-5 10 0t10 0' stroke='%237f8fa1' stroke-width='1.6' fill='none' opacity='.20' stroke-linecap='round'/%3E%3C/svg%3E\")"};
-function setSkin(k){if(!SKINS[k])k="basic";document.documentElement.dataset.skin=k;try{localStorage.setItem("wishdogam-skin",k)}catch(_){}try{applyAccent()}catch(_){}
+function setSkin(k){if(!SKINS[k])k="chiikawa";document.documentElement.dataset.skin=k;try{localStorage.setItem("wishdogam-skin",k)}catch(_){}try{applyAccent()}catch(_){}
   const m=document.querySelector('meta[name="theme-color"]');if(m)m.content=SKINS[k][2];
-  $("skinPop").querySelector("b").innerHTML=`테마 <small>${esc(SKINS[k][0])} 테마 사용 중</small>`;
-  $("skinList").innerHTML=Object.entries(SKINS).map(([id,[n,c,bg,ink,ch]])=>`<button type="button" class="skin" data-skin="${id}" aria-pressed="${id===k}" style="--sw:${c};--sk:${ink};--sbg:${bg};--spat:${SKPAT[id]||"none"}"><span class="av">${AV[ch]?`<img src="${AV[ch]}" alt="">`:"♡"}</span><span class="tx">${id==="basic"?"기본 (깔끔)":n}<span class="sw3"><i style="--c:${c}"></i><i style="--c:${ink}"></i><i style="--c:${bg};box-shadow:inset 0 0 0 1px #e5dfe1!important"></i></span></span><span class="ck">✓</span></button>`).join("")}
-{let k="basic";try{k=localStorage.getItem("wishdogam-skin")||"basic"}catch(_){}setSkin(k)}
+  $("skinPop").querySelector("b").innerHTML=`최애 캐릭터 <small>고른 친구 색으로 꾸며져요</small>`;
+  $("skinList").innerHTML=Object.entries(SKINS).map(([id,[n,c,bg,ink,ch]])=>`<button type="button" class="skin" data-skin="${id}" aria-pressed="${id===k}" style="--sw:${c};--sk:${ink};--sbg:${bg};--spat:${SKPAT[id]||"none"}"><span class="av">${AV[ch]?`<img src="${AV[ch]}" alt="">`:"♡"}</span><span class="tx">${n}<span class="sw3"><i style="--c:${c}"></i><i style="--c:${ink}"></i><i style="--c:${bg};box-shadow:inset 0 0 0 1px #e5dfe1!important"></i></span></span><span class="ck">✓</span></button>`).join("")}
+{let k="";try{k=localStorage.getItem("wishdogam-skin")||""}catch(_){}
+  if(SKINS[k])setSkin(k);else{setSkin("chiikawa");try{localStorage.removeItem("wishdogam-skin")}catch(_){}
+    const ov=document.createElement("div");ov.className="favov";ov.innerHTML=`<div class="favbox" role="dialog" aria-label="최애 캐릭터 고르기"><b>최애 캐릭터를 골라줘!</b><p>고른 친구 색과 무늬로 도감이 꾸며져요.<br>나중에 오른쪽 위 팔레트 버튼에서 언제든 바꿀 수 있어요.</p><div class="skins">${$("skinList").innerHTML}</div></div>`;
+    ov.querySelectorAll(".skin").forEach(b=>b.setAttribute("aria-pressed","false"));
+    ov.addEventListener("click",e=>{const b=e.target.closest("[data-skin]");if(!b)return;setSkin(b.dataset.skin);ov.classList.add("bye");setTimeout(()=>ov.remove(),220)});
+    document.body.appendChild(ov)}}
 $("skinBtn").addEventListener("click",e=>{e.stopPropagation();const P=$("skinPop"),open=P.hidden;P.hidden=!open;$("skinBtn").setAttribute("aria-expanded",open);
   if(open){const r=$("skinBtn").getBoundingClientRect();P.style.top=(r.bottom+8)+"px";P.style.right=Math.max(16,innerWidth-r.right)+"px"}});
 $("skinList").addEventListener("click",e=>{const b=e.target.closest("[data-skin]");if(b)setSkin(b.dataset.skin)});
@@ -1791,7 +1825,9 @@ $("sideTabs").addEventListener("click",e=>{const b=e.target.closest(".sitem");if
 document.querySelector(".widget").addEventListener("click",e=>{const b=e.target.closest("button");if(b)setStatus(b.dataset.s)});
 const pickCat=e=>{const b=e.target.closest("[data-v]");if(!b)return;state.cat=b.dataset.v;saveUi();render()};
 $("catPills").addEventListener("click",pickCat);$("sideCats").addEventListener("click",pickCat);
-let qt;$("q").addEventListener("input",e=>{clearTimeout(qt);qt=setTimeout(()=>{state.q=e.target.value.trim();state.limit=120;render()},150)});
+let qt;$("q").addEventListener("input",e=>{clearTimeout(qt);qt=setTimeout(()=>{state.q=e.target.value.trim();state.limit=120;render();renderQSug()},150)});
+$("qSug").addEventListener("click",e=>{const b=e.target.closest("[data-qs]");if(!b)return;const t=b.dataset.qs,v=b.dataset.v;
+  if(t==="q"){$("q").value=v;state.q=v}else{state[t]=v;state.q="";$("q").value=""}state.limit=120;saveUi();render();renderQSug()});
 let pickSec=null;
 function openPick(sec){pickSec=sec||null;$("fOverlay").querySelectorAll(".sbody > [data-sec]").forEach(g=>g.hidden=!!pickSec&&g.dataset.sec!==pickSec);$("fTitle").textContent=pickSec?{cat:"종류",series:"시리즈",color:"색",shop:"판매처"}[pickSec]:"필터";$("fOverlay").classList.toggle("one",!!pickSec);$("fOverlay").hidden=false}
 $("filterBtn").onclick=()=>openPick(null);
