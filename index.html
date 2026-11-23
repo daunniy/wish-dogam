@@ -838,6 +838,20 @@ h1::after{display:none!important;content:none!important}
 .qs{flex:none;display:inline-flex;align-items:center;gap:5px;height:32px;padding:0 12px;border-radius:999px;background:var(--pink3,#fff6f8);border:1px solid var(--edge);font-size:13px;font-weight:600;color:var(--label);white-space:nowrap}
 .qs small{font-size:11px;font-weight:700;color:var(--tint)}.qs i{font-style:normal;font-size:11.5px;color:var(--label2);font-weight:500}
 .qs.w{background:#fff}.qs:hover{border-color:var(--pink)}
+
+/* 프로필 사진 · 최애 캐릭터 */
+.uprof{display:flex;flex-direction:column;align-items:center;gap:6px}
+.upic{position:relative;padding:0;cursor:pointer;overflow:visible}.upic img{width:100%;height:100%;border-radius:50%;object-fit:cover}
+.ucam{position:absolute;right:-2px;bottom:-2px;width:28px;height:28px;border-radius:50%;background:var(--tint);color:#fff;display:grid;place-items:center;box-shadow:0 0 0 3px #fff}.ucam svg{width:15px;height:15px}
+.upicacts{display:flex;gap:12px}.upicacts .ulink{font-size:12.5px}
+.ufav{background:var(--pink3,#fff7f9);border:1px solid var(--edge);border-radius:18px;padding:14px;transition:box-shadow .3s}
+.ufav.hl{box-shadow:0 0 0 3px color-mix(in srgb,var(--pink) 45%,transparent)}
+.ufav > b{display:block;font-size:15px;color:var(--label)}.ufav > p{margin:2px 0 10px;font-size:12.5px;color:var(--label2)}
+.ufavs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.ufv{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 2px;border-radius:14px;background:#fff;border:1.5px solid transparent;font-size:12px;font-weight:600;color:var(--label)}
+.ufv span{width:40px;height:40px;border-radius:50%;overflow:hidden;box-shadow:0 0 0 2px var(--sw);background:#fff}.ufv img{width:100%;height:100%;object-fit:cover}
+.ufv[aria-pressed="true"]{border-color:var(--sw);background:color-mix(in srgb,var(--sw) 14%,#fff)}
+#userBtn .ubimg{width:28px;height:28px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 2px var(--pink2)}
 </style>
 </head>
 <body>
@@ -1012,6 +1026,19 @@ function persist(){
   if(idb){idbSet("store",store).catch(()=>toastSafe("브라우저 저장 공간이 꽉 찼어요"));return}
   try{localStorage.setItem(LS,JSON.stringify(store))}catch(e){toastSafe("브라우저 저장 공간이 꽉 찼어요")}}
 function toastSafe(m){try{toast(m)}catch(e){}}
+/* ---------- 프로필 (사진 · 최애 캐릭터) : 계정에 같이 저장 ---------- */
+const prof=()=>(store&&store.profile)||{};
+function setProfile(p){if(!store)return;store.profile={...prof(),...p,_t:Date.now()};dirty=true;persist();schedulePush();applyProfile()}
+const SKCH={chiikawa:"치이카와",hachiware:"하치와레",usagi:"우사기",momonga:"모몽가",kurimanju:"쿠리만쥬",shisa:"시사",rakko:"랏코"};
+function avatarSrc(){const p=prof();if(p.pic)return p.pic;const m=session&&session.user&&session.user.user_metadata;if(m&&(m.avatar_url||m.picture))return m.avatar_url||m.picture;const ch=SKCH[p.fav||document.documentElement.dataset.skin]||"치이카와";return (typeof AV!=="undefined"&&AV[ch])||""}
+function applyProfile(){const p=prof();
+  if(p.fav&&typeof setSkin==="function"&&document.documentElement.dataset.skin!==p.fav)setSkin(p.fav);
+  const b=document.getElementById("userBtn");if(b){const src=(p.pic||(session&&session.user&&session.user.user_metadata&&session.user.user_metadata.avatar_url))||"";b.innerHTML=src?`<img class="ubimg" src="${esc(src)}" alt="">`:`<svg class="i"><use href="#i-user"/></svg>`}
+  if(document.getElementById("uOverlay")&&!document.getElementById("uOverlay").hidden)userUi()}
+window.DOGAM_PROFILE={get:prof,set:setProfile};
+async function picToData(f){const url=URL.createObjectURL(f);try{const img=await new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=no;i.src=url});
+  const z=Math.min(img.width,img.height),c=document.createElement("canvas");c.width=c.height=256;const x=c.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,256,256);
+  x.drawImage(img,(img.width-z)/2,(img.height-z)/2,z,z,0,0,256,256);return c.toDataURL("image/jpeg",.85)}finally{URL.revokeObjectURL(url)}}
 function snap(){const docs=Object.values(store.wishes).filter(d=>!d._deleted).map(d=>({id:d.id,data:()=>d}));return {docs,metadata:{fromCache:false}}}
 function emit(){const s=snap();subs.forEach(f=>{try{f(s)}catch(e){console.error(e)}})}
 function changed(){dirty=true;persist();emit();schedulePush()}
@@ -1025,6 +1052,7 @@ async function seed(){
   persist();
 }
 const ready=seed();
+ready.then(()=>{try{applyProfile()}catch(_){}});
 
 const db={
   collection(){return {
@@ -1096,12 +1124,13 @@ async function syncOnce(force){
     if(error){setSync("동기화 실패: "+error.message);return}
     const rw=(data&&data.data&&data.data.wishes)||{};
     if(mergeIn(rw)){persist();emit()}
+    {const rp=data&&data.data&&data.data.profile,lp=store.profile;if(rp&&(rp._t||0)>((lp&&lp._t)||0)){store.profile=rp;persist();applyProfile()}else if(lp&&(lp._t||0)>((rp&&rp._t)||0))need=true}
     for(const [id,d] of Object.entries(store.wishes)){const r=rw[id];if(!r||(d._t||0)>(r._t||0)){need=true;break}}   // 내 쪽이 더 새로운 게 있으면 올림
     remoteAt=data?data.updated_at:at;
   }
   if(need){
     dirty=false;
-    const {data,error}=await sb.from("dogam").upsert({user_id:uid,data:{wishes:store.wishes},updated_at:new Date().toISOString()}).select("updated_at").maybeSingle();
+    const {data,error}=await sb.from("dogam").upsert({user_id:uid,data:{wishes:store.wishes,profile:store.profile||null},updated_at:new Date().toISOString()}).select("updated_at").maybeSingle();
     if(error){dirty=true;setSync("저장 실패: "+error.message);return}
     remoteAt=(data&&data.updated_at)||null;
   }
@@ -1131,14 +1160,20 @@ window.DOGAM_SB_READY=new Promise(ok=>{const t=setInterval(()=>{if(sb||!hasSB){c
 
 /* ---------- 로그인 화면 ---------- */
 const $u=id=>document.getElementById(id);
+function profUi(){const src=avatarSrc(),p=prof();
+  return `<div class="uprof"><button type="button" class="uav big upic" id="uPicBtn" aria-label="프로필 사진 바꾸기">${src?`<img src="${esc(src)}" alt="">`:ic("user")}<span class="ucam" aria-hidden="true">${ic("plus","i sm")}</span></button>
+    <input type="file" id="uPic" accept="image/*" hidden>
+    <div class="upicacts"><button type="button" class="ulink" id="uPicPick">사진 바꾸기</button>${p.pic?`<button type="button" class="ulink" id="uPicReset">기본으로</button>`:""}</div></div>`}
+function favUi(){if(typeof SKINS==="undefined")return "";const cur=prof().fav||document.documentElement.dataset.skin;
+  return `<div class="ufav"><b>최애 캐릭터</b><p>고른 친구 색과 무늬로 도감이 꾸며져요</p><div class="ufavs">${Object.entries(SKINS).map(([id,[n,c]])=>`<button type="button" class="ufv" data-fav="${id}" aria-pressed="${id===cur}" style="--sw:${c}"><span>${typeof AV!=="undefined"&&AV[n]?`<img src="${AV[n]}" alt="">`:""}</span>${esc(n)}</button>`).join("")}</div></div>`}
 function userUi(){
   const b=$u("userBtn");if(b)b.classList.toggle("on",!!session);
   const B=$u("uBody");if(!B||$u("uOverlay").hidden)return;
   const backup=`<details class="ubk"><summary>백업 파일로 저장하기</summary><div class="ubtns"><button type="button" class="ubtn ghost" id="uExport">백업 내려받기</button><label class="ubtn ghost">백업 불러오기<input type="file" id="uImport" accept="application/json" hidden></label></div></details>`;
   if(!hasSB){
-    B.innerHTML=`<div class="uhead"><div class="uav">${ic("user")}</div><h3>이 브라우저에 저장 중</h3><p>지금은 기록이 이 브라우저에만 저장돼요.<br>로그인 기능은 <b>설명서.txt 3단계</b>(Supabase 연결)를 하면 켜져요.</p></div>`+backup;
+    B.innerHTML=`<div class="uhead">${profUi()}<h3>이 브라우저에 저장 중</h3><p>지금은 기록이 이 브라우저에만 저장돼요.<br>로그인 기능은 <b>설명서.txt 3단계</b>(Supabase 연결)를 하면 켜져요.</p></div>${favUi()}`+backup;
   }else if(!session){
-    B.innerHTML=`<div class="uhead"><div class="uav big">${AV&&AV["치이카와"]?`<img src="${AV["치이카와"]}" alt="">`:ic("user")}</div><h3>치이카와 위시 도감</h3><p>로그인하면 폰·PC 어디서든<br>내 위시·토벌 기록을 같이 볼 수 있어요.</p></div>
+    B.innerHTML=`<div class="uhead">${profUi()}<h3>치이카와 위시 도감</h3><p>로그인하면 폰·PC 어디서든<br>내 위시·토벌 기록을 같이 볼 수 있어요.</p></div>${favUi()}
       ${CFG.google||CFG.kakao?`<div class="ubox">${CFG.google?`<button type="button" class="gbtn" id="uGoogle" style="width:100%"><svg viewBox="0 0 48 48" width="22" height="22" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>Google로 로그인</button>`:""}${CFG.kakao?`<button type="button" class="kbtn" id="uKakao"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="#191919" d="M12 3.5C6.8 3.5 2.6 6.8 2.6 10.9c0 2.6 1.7 4.9 4.3 6.2l-1.1 4c-.1.3.3.6.6.4l4.7-3.1c.3 0 .6.1.9.1 5.2 0 9.4-3.3 9.4-7.5S17.2 3.5 12 3.5z"/></svg>카카오로 로그인</button>`:""}</div>
       <div class="uor"><span>또는 이메일로</span></div>`:""}
       <form class="ubox" id="uForm"><input id="uEmail" type="email" placeholder="이메일" required autocomplete="email"><input id="uPw" type="password" placeholder="비밀번호 (6자 이상)" required minlength="6" autocomplete="current-password">
@@ -1146,14 +1181,19 @@ function userUi(){
       <div class="ubtns"><button type="submit" class="ubtn">로그인</button><button type="button" class="ubtn ghost" id="uSignup">회원가입</button></div>
       <button type="button" class="ulink" id="uLater">로그인 없이 둘러보기</button></form>`+backup;
   }else{
-    B.innerHTML=`<div class="uhead"><div class="uav on">${ic("user")}</div><h3>${esc(session.user.email||"")}</h3><p id="uSync">${esc(syncState||"계정에 저장됨")}</p></div>
+    B.innerHTML=`<div class="uhead">${profUi()}<h3>${esc(session.user.email||"")}</h3><p id="uSync">${esc(syncState||"계정에 저장됨")}</p></div>${favUi()}
       <div class="ubox"><div class="ubtns"><button type="button" class="ubtn ghost" id="uSyncNow">지금 동기화</button><button type="button" class="ubtn ghost" id="uLogout">로그아웃</button></div></div>`+backup;
   }
 }
 function openUser(){$u("uOverlay").hidden=false;userUi()}
+window.DOGAM_openUser=openUser;
+document.addEventListener("change",async e=>{if(e.target&&e.target.id==="uPic"){const f=e.target.files&&e.target.files[0];if(!f)return;try{setProfile({pic:await picToData(f)});toastSafe("프로필 사진을 바꿨어요")}catch(_){toastSafe("사진을 불러오지 못했어요")}}});
 document.addEventListener("click",async e=>{
   const t=e.target;
   if(t.closest("#userBtn"))return openUser();
+  if(t.closest("#uPicBtn")||t.closest("#uPicPick")){const f=$u("uPic");if(f)f.click();return}
+  if(t.closest("#uPicReset")){setProfile({pic:""});return}
+  {const fv=t.closest("[data-fav]");if(fv){setSkin(fv.dataset.fav);setProfile({fav:fv.dataset.fav});try{localStorage.setItem("wishdogam-fav-chosen","1")}catch(_){}return}}
   if(t.closest("#uGoogle")){const {error}=await sb.auth.signInWithOAuth({provider:"google",options:{redirectTo:location.origin+location.pathname}});if(error)toastSafe("구글 로그인을 시작하지 못했어요: "+error.message);return}
   if(t.closest("#uKakao")){const {error}=await sb.auth.signInWithOAuth({provider:"kakao",options:{redirectTo:location.origin+location.pathname,scopes:"profile_nickname profile_image"}});if(error)toastSafe("카카오 로그인을 시작하지 못했어요: "+error.message);return}
   if(t.closest("#uLater")){$u("uOverlay").hidden=true;try{sessionStorage.setItem("dogam-later","1")}catch(_){}return}
@@ -1554,14 +1594,11 @@ function setSkin(k){if(!SKINS[k])k="chiikawa";document.documentElement.dataset.s
   $("skinPop").querySelector("b").innerHTML=`최애 캐릭터 <small>고른 친구 색으로 꾸며져요</small>`;
   $("skinList").innerHTML=Object.entries(SKINS).map(([id,[n,c,bg,ink,ch]])=>`<button type="button" class="skin" data-skin="${id}" aria-pressed="${id===k}" style="--sw:${c};--sk:${ink};--sbg:${bg};--spat:${SKPAT[id]||"none"}"><span class="av">${AV[ch]?`<img src="${AV[ch]}" alt="">`:"♡"}</span><span class="tx">${n}<span class="sw3"><i style="--c:${c}"></i><i style="--c:${ink}"></i><i style="--c:${bg};box-shadow:inset 0 0 0 1px #e5dfe1!important"></i></span></span><span class="ck">✓</span></button>`).join("")}
 {let k="";try{k=localStorage.getItem("wishdogam-skin")||""}catch(_){}
-  if(SKINS[k])setSkin(k);else{setSkin("chiikawa");try{localStorage.removeItem("wishdogam-skin")}catch(_){}
-    const ov=document.createElement("div");ov.className="favov";ov.innerHTML=`<div class="favbox" role="dialog" aria-label="최애 캐릭터 고르기"><b>최애 캐릭터를 골라줘!</b><p>고른 친구 색과 무늬로 도감이 꾸며져요.<br>나중에 오른쪽 위 팔레트 버튼에서 언제든 바꿀 수 있어요.</p><div class="skins">${$("skinList").innerHTML}</div></div>`;
-    ov.querySelectorAll(".skin").forEach(b=>b.setAttribute("aria-pressed","false"));
-    ov.addEventListener("click",e=>{const b=e.target.closest("[data-skin]");if(!b)return;setSkin(b.dataset.skin);ov.classList.add("bye");setTimeout(()=>ov.remove(),220)});
-    document.body.appendChild(ov)}}
+  if(SKINS[k])setSkin(k);else{setSkin("chiikawa");let seen=null;try{seen=localStorage.getItem("wishdogam-fav-chosen")}catch(_){}
+    if(!seen)setTimeout(()=>{const o=document.getElementById("uOverlay");if(o&&o.hidden&&window.DOGAM_openUser)window.DOGAM_openUser();setTimeout(()=>{const f=document.querySelector(".ufav");if(f)f.classList.add("hl")},300)},1200)}}
 $("skinBtn").addEventListener("click",e=>{e.stopPropagation();const P=$("skinPop"),open=P.hidden;P.hidden=!open;$("skinBtn").setAttribute("aria-expanded",open);
   if(open){const r=$("skinBtn").getBoundingClientRect();P.style.top=(r.bottom+8)+"px";P.style.right=Math.max(16,innerWidth-r.right)+"px"}});
-$("skinList").addEventListener("click",e=>{const b=e.target.closest("[data-skin]");if(b)setSkin(b.dataset.skin)});
+$("skinList").addEventListener("click",e=>{const b=e.target.closest("[data-skin]");if(b){setSkin(b.dataset.skin);try{window.DOGAM_PROFILE.set({fav:b.dataset.skin});localStorage.setItem("wishdogam-fav-chosen","1")}catch(_){}}});
 document.addEventListener("click",e=>{const P=$("skinPop");if(!P.hidden&&!e.target.closest("#skinPop,#skinBtn")){P.hidden=true;$("skinBtn").setAttribute("aria-expanded","false")}});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("skinPop").hidden){$("skinPop").hidden=true;$("skinBtn").focus()}});
 /* 캐릭터 줄·필터 줄을 PC 마우스로 옆으로 넘기기: 휠을 가로로 바꾸고, 끌어서 넘기기 */
