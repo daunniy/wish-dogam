@@ -420,6 +420,7 @@ body.me-mode .friends,body.me-mode .fbar,body.me-mode .viewbar,body.me-mode #rat
 .fchip.rs{background:transparent;box-shadow:none;color:var(--tint);padding:0 8px}
 #fOverlay.one .glab{display:none}
 .pgrid{display:flex;flex-wrap:wrap;gap:8px;padding:2px 2px 4px}
+.pgh{flex:0 0 100%;margin:10px 2px 0;font-size:12.5px;font-weight:700;color:var(--label2);letter-spacing:.02em}.pgh:first-of-type{margin-top:4px}.pill .pm{font-size:11px;color:var(--label2);font-weight:600;margin-right:1px}
 .pgrid .pill{box-shadow:0 0 0 .5px var(--sep);height:36px;font-size:14.5px}
 @media (min-width:900px){
   .friends{flex-wrap:wrap;overflow:visible;gap:2px 0}
@@ -1206,6 +1207,9 @@ function renderLineup(it){const el=$("fLineup");renderSeriesRel(it);
   el.hidden=false;
   el.innerHTML=`<div class="lh"><b>같은 라인업</b><span>${a.length}종 중 ${b}종 토벌</span></div><div class="meter"><i style="width:${b/a.length*100}%"></i></div><div class="lgrid">${a.map(x=>`<button type="button" class="lc ${x.id===it.id?"cur":""} ${x.status==="bought"?"own":""}" data-lid="${esc(x.id)}" style="--cc:${CH_COLOR[x.character]||"#d1d1d6"}"><span class="lb"><span class="art">${imgHtml(x)}</span>${x.status==="bought"?`<span class="lo">${ic("spear","i sm")}</span>`:x.status==="wish"?`<span class="lo w">${ic("heart","i sm")}</span>`:""}</span><span class="ll">${x.id===it.id?"보는 중":esc(x.character||"")}</span></button>`).join("")}</div>`;
 }
+const SHOPN={"티몰 공식몰":"중국 공식몰 (티몰)","미니소":"미니소 (중국)","대원샵":"대원미디어 (한국 공식)","대원미디어 (네이버)":"대원미디어 (한국 공식)","특전":"특전·비매품","특전(비매품)":"특전·비매품","영화관 입장 특전":"특전·비매품","경품(프라이즈)":"경품 (프라이즈)","모구모구 혼포 (오타루 베이비 카스테라점)":"모구모구 혼포","홍콩 한정":"홍콩·대만 한정","대만 한정":"홍콩·대만 한정","기타 콜라보·이벤트":"콜라보·기타","산리오 콜라보 (기타)":"콜라보·기타","기타 (공식몰 외)":"콜라보·기타","지역 한정":"콜라보·기타"};
+const SHOP_GROUPS=[["일본",["일본 공식몰","치이카와 포켓 스토어","나가노 마켓","모구모구 혼포","돈키호테","9090"]],["뽑기·경품·특전",["가챠","이치방쿠지·쿠지","경품 (프라이즈)","반다이 식완","특전·비매품"]],["한국",["대원미디어 (한국 공식)","한국 한정"]],["중국·대만·홍콩",["중국 공식몰 (티몰)","미니소 (중국)","중국 한정","홍콩·대만 한정"]],["그 밖에",["콜라보·기타","지난 굿즈"]]];
+const normDate=r=>{const m=String(r||"").match(/(\d{4})[.\-/년 ]*(\d{1,2})?/);return m?m[1]+"."+String(m[2]||"01").padStart(2,"0"):""};
 const DESC=["name","nameJa","img","spr","price","currency","noPrice","priceEst","estKind","series","released","category","character","chars","shop","link","linkLabel","available","upcoming","popRank"];
 let CATMAP=null,HID=null,EXMAP=null;
 /* extra.json 상품은 처음 한 번만 내 기록에 복사되기 때문에, 화면을 열 때마다 최신 정보(일본어 이름·사진·가격 등)로 다시 맞춤 */
@@ -1217,6 +1221,7 @@ function merge(){if(!CATMAP||CATMAP.size!==CAT.items.length)CATMAP=new Map(CAT.i
   const rows=SRC.filter(i=>i.status!=="hidden"&&!(i.status==="cand"&&HID.has(i.id))).map(i=>{const c=CATMAP.get(i.id)||exOf(i.id);if(!c)return i;const o={...i};
     DESC.forEach(k=>{if(k in c&&!(k==="img"&&String(i.img||"").startsWith("img/")))o[k]=c[k];else if(k==="link"&&!c.link&&/tobeol\.com/.test(i.link||""))o.link=""});return o});
   state.items=rows.concat(CAT.items.filter(i=>!ids.has(i.id)).map(i=>({...i,status:"cand",_cat:true})));
+  state.items.forEach(i=>{const n=SHOPN[i.shop];if(n)i.shop=n});if(state.shop!=="all"&&SHOPN[state.shop])state.shop=SHOPN[state.shop];
   const rd=new Map();state.items.forEach(i=>{if(i.released){const k=lineKeyKo(i);if(k){const o=rd.get(k);if(!o||i.released<o)rd.set(k,i.released)}}});
   state.items.forEach(i=>{if(!i.released){const k=lineKeyKo(i);if(k&&rd.has(k)){i.released=rd.get(k);i._relGuess=true}}})}
 async function writeItem(it,changes){const ref=db.collection("wishes").doc(it.id);
@@ -1320,11 +1325,17 @@ function renderFilters(){applyAccent();
   const act=Object.keys(SECN).filter(k=>state[k]!=="all");
   $("fbar").innerHTML=Object.keys(SECN).map(k=>state[k]!=="all"?`<button type="button" class="fchip on" data-sec="${k}">${esc(state[k])}<span class="x" data-clr="${k}" aria-label="${SECN[k]} 해제">✕</span></button>`:`<button type="button" class="fchip" data-sec="${k}">${SECN[k]}<svg class="cv" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>`).join("")+(act.length>1?`<button type="button" class="fchip rs" data-clr="all">모두 해제</button>`:"");
   const sc=cnt("shop",(i,v)=>(i.shop||"직접 추가")===v);
-  $("shopSeg").innerHTML=[["all","전체"]].concat([...new Set(state.items.map(i=>i.shop).filter(Boolean))].sort((x,y)=>sc(y)-sc(x)).map(x=>[x,x])).map(([k,l])=>`<button type="button" class="pill" data-v="${esc(k)}" aria-pressed="${state.shop===k}">${esc(l)}<span class="n">${sc(k)}</span></button>`).join("");
+  {const all=[...new Set(state.items.map(i=>i.shop).filter(Boolean))];const pb=x=>`<button type="button" class="pill" data-v="${esc(x)}" aria-pressed="${state.shop===x}">${esc(x)}<span class="n">${sc(x)}</span></button>`;const used=new Set();let h=`<button type="button" class="pill" data-v="all" aria-pressed="${state.shop==="all"}">전체</button>`;
+   SHOP_GROUPS.forEach(([g,list])=>{const a=list.filter(x=>all.includes(x));a.forEach(x=>used.add(x));if(a.length)h+=`<div class="pgh">${g}</div>`+a.map(pb).join("")});
+   const rest=all.filter(x=>!used.has(x)).sort((x,y)=>sc(y)-sc(x));if(rest.length)h+=`<div class="pgh">직접 추가·기타</div>`+rest.map(pb).join("");
+   $("shopSeg").innerHTML=h}
   const se=cnt("series",(i,v)=>seriesOf(i)===v);
   const sc2={};state.items.forEach(i=>{const x=seriesOf(i);if(x)(sc2[x]=sc2[x]||[0,0]),sc2[x][0]++,i.status==="bought"&&sc2[x][1]++});
-  const sers=Object.keys(sc2).concat(state.series!=="all"&&!sc2[state.series]?[state.series]:[]).sort((x,y)=>(sc2[y]||[0])[0]-(sc2[x]||[0])[0]);
-  $("serSeg").innerHTML=[`<button type="button" class="pill" data-v="all" aria-pressed="${state.series==="all"}">모든 시리즈</button>`].concat(sers.map(x=>{const [t,b]=sc2[x]||[0,0];return `<button type="button" class="pill" data-v="${esc(x)}" aria-pressed="${state.series===x}" title="${t}종 중 ${b}종 토벌">${esc(x)}<span class="n">${se(x)}</span>${b?`<span class="pc">${Math.round(b/t*100)||"<1"}%</span>`:""}</button>`})).join("");
+  const srel={};state.items.forEach(i=>{const x=seriesOf(i);const r=normDate(i.released);if(x&&r&&(!srel[x]||r>srel[x]))srel[x]=r});
+  const sers=Object.keys(sc2).concat(state.series!=="all"&&!sc2[state.series]?[state.series]:[]).sort((x,y)=>(srel[y]||"").localeCompare(srel[x]||"")||(sc2[y]||[0])[0]-(sc2[x]||[0])[0]);
+  let sh=`<button type="button" class="pill" data-v="all" aria-pressed="${state.series==="all"}">모든 시리즈</button>`,lastY=null;
+  sers.forEach(x=>{const y=(srel[x]||"").slice(0,4)||"날짜 모름";if(y!==lastY){sh+=`<div class="pgh">${y==="날짜 모름"?y:y+"년"}</div>`;lastY=y}const [t,b]=sc2[x]||[0,0];const m=(srel[x]||"").slice(5,7);sh+=`<button type="button" class="pill" data-v="${esc(x)}" aria-pressed="${state.series===x}" title="${t}종 중 ${b}종 토벌${srel[x]?" · 최근 발매 "+srel[x]:""}">${m?`<small class="pm">${+m}월</small>`:""}${esc(x)}<span class="n">${se(x)}</span>${b?`<span class="pc">${Math.round(b/t*100)||"<1"}%</span>`:""}</button>`});
+  $("serSeg").innerHTML=sh;
   $("sortSel").value=state.sort;
   $("viewSeg").innerHTML=VIEWS.map(([k,,icn,l])=>`<button type="button" data-v="${k}" aria-pressed="${state.view===k}" aria-label="${l} 보기" title="${l}">${ic(icn,"i sm")}</button>`).join("");
 }
