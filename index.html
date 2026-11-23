@@ -786,6 +786,39 @@ h1::after{display:none!important;content:none!important}
 .mold{display:block;font-size:12px;color:#b98a2e;margin-top:2px}
 .mp.old small{color:#b98a2e}
 .mev{margin-top:8px;font-size:12px;text-align:left}.mev summary{cursor:pointer;color:var(--label2)}.mev a{display:block;padding:4px 0;color:var(--tint);text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* 테마 꾸미기: 캐릭터 무늬 배경 + 테마색 강조 */
+:root[data-skin="chiikawa"]{--pat:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cpath transform='translate%286 6%29 scale%28.42%29' d='M10 17s-7-4.4-7-9.2A3.8 3.8 0 0 1 10 6a3.8 3.8 0 0 1 7 1.8C17 12.6 10 17 10 17z' fill='#f08fa8' opacity='0.22'/%3E%3Cpath transform='translate%2830 30%29 scale%28.42%29' d='M10 17s-7-4.4-7-9.2A3.8 3.8 0 0 1 10 6a3.8 3.8 0 0 1 7 1.8C17 12.6 10 17 10 17z' fill='#f08fa8' opacity='0.14'/%3E%3C/svg%3E");--ink:#c95f80}
+:root[data-skin="hachiware"]{--pat:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Ccircle cx='10' cy='10' r='2.2' fill='#6fa3e6' opacity='0.22'/%3E%3Ccircle cx='34' cy='34' r='2.2' fill='#6fa3e6' opacity='0.14'/%3E%3Cpath d='M34 8q4 4 8 0' stroke='#6fa3e6' stroke-width='1.6' fill='none' opacity='.18' stroke-linecap='round'/%3E%3C/svg%3E");--ink:#3f74b8}
+:root[data-skin="usagi"]{--pat:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cpath transform='translate%2812 12%29' d='M0 -4 L1.2 -1.2 L4 0 L1.2 1.2 L0 4 L-1.2 1.2 L-4 0 L-1.2 -1.2Z' fill='#e9b73b' opacity='0.32'/%3E%3Cpath transform='translate%2836 34%29' d='M0 -3 L0.8999999999999999 -0.8999999999999999 L3 0 L0.8999999999999999 0.8999999999999999 L0 3 L-0.8999999999999999 0.8999999999999999 L-3 0 L-0.8999999999999999 -0.8999999999999999Z' fill='#e9b73b' opacity='0.2'/%3E%3C/svg%3E");--ink:#a87a0a}
+:root[data-skin="momonga"]{--pat:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cpath transform='translate%2812 10%29' d='M0 -3.4 L1.02 -1.02 L3.4 0 L1.02 1.02 L0 3.4 L-1.02 1.02 L-3.4 0 L-1.02 -1.02Z' fill='#a28ad9' opacity='0.25'/%3E%3Ccircle cx='36' cy='34' r='1.8' fill='#a28ad9' opacity='0.22'/%3E%3Ccircle cx='40' cy='12' r='1.2' fill='#a28ad9' opacity='0.2'/%3E%3C/svg%3E");--ink:#6c55b0}
+:root[data-skin="kurimanju"]{--pat:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cellipse cx='12' cy='12' rx='4' ry='3.2' fill='#b98552' opacity='.18'/%3E%3Cellipse cx='36' cy='34' rx='3' ry='2.4' fill='#b98552' opacity='.13'/%3E%3C/svg%3E");--ink:#7f5530}
+:root[data-skin="shisa"]{--pat:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Ccircle cx='17.0' cy='12.0' r='2.6' fill='#ee8a3a' opacity='.16'/%3E%3Ccircle cx='13.545261208414233' cy='16.755225315142297' r='2.6' fill='#ee8a3a' opacity='.16'/%3E%3Ccircle cx='7.955132880891927' cy='14.939226086703497' r='2.6' fill='#ee8a3a' opacity='.16'/%3E%3Ccircle cx='7.9545882906465915' cy='9.061523506674533' r='2.6' fill='#ee8a3a' opacity='.16'/%3E%3Ccircle cx='13.544380004496658' cy='7.2444884185073315' r='2.6' fill='#ee8a3a' opacity='.16'/%3E%3Ccircle cx='36' cy='34' r='2' fill='#ee8a3a' opacity='0.16'/%3E%3C/svg%3E");--ink:#b85a12}
+:root[data-skin="rakko"]{--pat:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cpath d='M4 14q5-5 10 0t10 0' stroke='#7f8fa1' stroke-width='1.6' fill='none' opacity='.2' stroke-linecap='round'/%3E%3Cpath d='M26 38q5-5 10 0t10 0' stroke='#7f8fa1' stroke-width='1.6' fill='none' opacity='.14' stroke-linecap='round'/%3E%3C/svg%3E");--ink:#4d5f73}
+:root[data-skin]:not([data-skin="basic"]) body{background-image:var(--pat)!important;background-size:48px 48px!important;background-attachment:fixed}
+:root[data-skin]:not([data-skin="basic"]) .fchip[aria-pressed="true"],:root[data-skin]:not([data-skin="basic"]) .fchip.on,:root[data-skin]:not([data-skin="basic"]) .pill[aria-pressed="true"]{background:var(--ink)!important;border-color:var(--ink)!important}
+:root[data-skin]:not([data-skin="basic"]) .brand{color:var(--ink)!important}
+:root[data-skin]:not([data-skin="basic"]) .card{border-color:var(--edge)}
+:root[data-skin]:not([data-skin="basic"]) .card:hover{border-color:var(--pink)}
+:root[data-skin]:not([data-skin="basic"]) .tabbar{background:color-mix(in srgb,var(--pink3) 86%,transparent)!important}
+:root[data-skin]:not([data-skin="basic"]) .widget,:root[data-skin]:not([data-skin="basic"]) .pgline{border-color:var(--edge)!important}
+.skinpop{width:min(340px,calc(100vw - 32px))!important;padding:16px!important}
+.skinpop > b{display:flex!important;align-items:baseline;justify-content:space-between}.skinpop > b small{font-size:12px;font-weight:500;color:var(--label2)}
+.skins{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}
+.skin{position:relative;flex-direction:row!important;align-items:center;gap:10px!important;padding:10px!important;border-radius:16px!important;border:1.5px solid #eee6e8;background:var(--sbg) var(--spat);background-size:36px 36px;font-size:13.5px!important;font-weight:700;color:#3a3335!important;text-align:left;transition:transform .15s,border-color .15s}
+.skin:hover{background:var(--sbg) var(--spat)!important;background-size:36px 36px!important;transform:translateY(-1px);border-color:var(--sw)}
+.skin[aria-pressed="true"]{border-color:var(--sk)!important;box-shadow:0 0 0 2px color-mix(in srgb,var(--sk) 30%,transparent)}
+.skin .av{width:34px;height:34px;border-radius:50%;flex:none;background:#fff;box-shadow:0 0 0 2px var(--sw);overflow:hidden;display:grid;place-items:center;font-size:15px;color:var(--sk)}
+.skin .av img{width:100%;height:100%;object-fit:cover}
+.skin .sw3{display:flex;gap:3px;margin-top:3px}.skin .sw3 i{width:9px!important;height:9px!important;border-radius:50%!important;box-shadow:none!important;background:var(--c)!important}
+.skin .tx{display:flex;flex-direction:column;min-width:0}
+.skin .ck{position:absolute;top:6px;right:8px;font-size:11px;color:var(--sk);opacity:0}.skin[aria-pressed="true"] .ck{opacity:1}
+
+/* 스크롤해도 위쪽 버튼(필터·내 정보·장바구니·테마·추가)이 따라오게 */
+.tb-btns.float{position:fixed;z-index:30;top:calc(10px + env(safe-area-inset-top,0px));right:max(12px,env(safe-area-inset-right,0px));padding:5px 6px;border-radius:999px;background:color-mix(in srgb,var(--card,#fff) 92%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:0 6px 20px rgba(60,30,40,.12),0 0 0 1px var(--edge);animation:tbin .18s ease-out}
+.tb-btns.float .iconbtn{width:38px;height:38px}
+@keyframes tbin{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.tb-ph{grid-area:btns;visibility:hidden}
 </style>
 </head>
 <body>
@@ -1481,9 +1514,12 @@ const rsClick=e=>{const b=e.target.closest("[data-rs]");if(!b)return;e.stopImmed
 $("list").addEventListener("click",rsClick,true);
 $("rsTop").addEventListener("click",rsClick,true);
 /* 웹 테마: 이 기기에 기억 */
-const SKINS={"basic": ["기본", "#dc7896"], "chiikawa": ["치이카와", "#f4a7b9"], "hachiware": ["하치와레", "#8bb8e8"], "usagi": ["우사기", "#f5cf5a"], "momonga": ["모몽가", "#b9a3e3"], "kurimanju": ["쿠리만쥬", "#c9a27c"], "shisa": ["시사", "#f39a4a"], "rakko": ["랏코", "#9aa5b1"]};
+const SKINS={"basic":["기본","#dc7896","#fbf8f6","#c95f80","치이카와"],"chiikawa":["치이카와","#f08fa8","#fff8f9","#c95f80","치이카와"],"hachiware":["하치와레","#6fa3e6","#f4f7fb","#3f74b8","하치와레"],"usagi":["우사기","#e9b73b","#fffcf2","#a87a0a","우사기"],"momonga":["모몽가","#a28ad9","#f8f6fc","#6c55b0","모몽가"],"kurimanju":["쿠리만쥬","#b98552","#faf7f3","#7f5530","쿠리만쥬"],"shisa":["시사","#ee8a3a","#fff8f2","#b85a12","시사"],"rakko":["랏코","#7f8fa1","#f5f6f8","#4d5f73","랏코"]};
+const SKPAT={"chiikawa": "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cpath transform='translate%286 6%29 scale%28.42%29' d='M10 17s-7-4.4-7-9.2A3.8 3.8 0 0 1 10 6a3.8 3.8 0 0 1 7 1.8C17 12.6 10 17 10 17z' fill='#f08fa8' opacity='0.22'/%3E%3Cpath transform='translate%2830 30%29 scale%28.42%29' d='M10 17s-7-4.4-7-9.2A3.8 3.8 0 0 1 10 6a3.8 3.8 0 0 1 7 1.8C17 12.6 10 17 10 17z' fill='#f08fa8' opacity='0.14'/%3E%3C/svg%3E\")", "hachiware": "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Ccircle cx='10' cy='10' r='2.2' fill='#6fa3e6' opacity='0.22'/%3E%3Ccircle cx='34' cy='34' r='2.2' fill='#6fa3e6' opacity='0.14'/%3E%3Cpath d='M34 8q4 4 8 0' stroke='#6fa3e6' stroke-width='1.6' fill='none' opacity='.18' stroke-linecap='round'/%3E%3C/svg%3E\")", "usagi": "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cpath transform='translate%2812 12%29' d='M0 -4 L1.2 -1.2 L4 0 L1.2 1.2 L0 4 L-1.2 1.2 L-4 0 L-1.2 -1.2Z' fill='#e9b73b' opacity='0.32'/%3E%3Cpath transform='translate%2836 34%29' d='M0 -3 L0.8999999999999999 -0.8999999999999999 L3 0 L0.8999999999999999 0.8999999999999999 L0 3 L-0.8999999999999999 0.8999999999999999 L-3 0 L-0.8999999999999999 -0.8999999999999999Z' fill='#e9b73b' opacity='0.2'/%3E%3C/svg%3E\")", "momonga": "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cpath transform='translate%2812 10%29' d='M0 -3.4 L1.02 -1.02 L3.4 0 L1.02 1.02 L0 3.4 L-1.02 1.02 L-3.4 0 L-1.02 -1.02Z' fill='#a28ad9' opacity='0.25'/%3E%3Ccircle cx='36' cy='34' r='1.8' fill='#a28ad9' opacity='0.22'/%3E%3Ccircle cx='40' cy='12' r='1.2' fill='#a28ad9' opacity='0.2'/%3E%3C/svg%3E\")", "kurimanju": "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cellipse cx='12' cy='12' rx='4' ry='3.2' fill='#b98552' opacity='.18'/%3E%3Cellipse cx='36' cy='34' rx='3' ry='2.4' fill='#b98552' opacity='.13'/%3E%3C/svg%3E\")", "shisa": "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Ccircle cx='17.0' cy='12.0' r='2.6' fill='#ee8a3a' opacity='.16'/%3E%3Ccircle cx='13.545261208414233' cy='16.755225315142297' r='2.6' fill='#ee8a3a' opacity='.16'/%3E%3Ccircle cx='7.955132880891927' cy='14.939226086703497' r='2.6' fill='#ee8a3a' opacity='.16'/%3E%3Ccircle cx='7.9545882906465915' cy='9.061523506674533' r='2.6' fill='#ee8a3a' opacity='.16'/%3E%3Ccircle cx='13.544380004496658' cy='7.2444884185073315' r='2.6' fill='#ee8a3a' opacity='.16'/%3E%3Ccircle cx='36' cy='34' r='2' fill='#ee8a3a' opacity='0.16'/%3E%3C/svg%3E\")", "rakko": "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cpath d='M4 14q5-5 10 0t10 0' stroke='#7f8fa1' stroke-width='1.6' fill='none' opacity='.2' stroke-linecap='round'/%3E%3Cpath d='M26 38q5-5 10 0t10 0' stroke='#7f8fa1' stroke-width='1.6' fill='none' opacity='.14' stroke-linecap='round'/%3E%3C/svg%3E\")"};
 function setSkin(k){if(!SKINS[k])k="basic";document.documentElement.dataset.skin=k;try{localStorage.setItem("wishdogam-skin",k)}catch(_){}try{applyAccent()}catch(_){}
-  $("skinList").innerHTML=Object.entries(SKINS).map(([id,[n,c]])=>`<button type="button" class="skin" data-skin="${id}" aria-pressed="${id===k}" style="--sw:${c}"><i></i>${n}</button>`).join("")}
+  const m=document.querySelector('meta[name="theme-color"]');if(m)m.content=SKINS[k][2];
+  $("skinPop").querySelector("b").innerHTML=`테마 <small>${esc(SKINS[k][0])} 테마 사용 중</small>`;
+  $("skinList").innerHTML=Object.entries(SKINS).map(([id,[n,c,bg,ink,ch]])=>`<button type="button" class="skin" data-skin="${id}" aria-pressed="${id===k}" style="--sw:${c};--sk:${ink};--sbg:${bg};--spat:${SKPAT[id]||"none"}"><span class="av">${AV[ch]?`<img src="${AV[ch]}" alt="">`:"♡"}</span><span class="tx">${id==="basic"?"기본 (깔끔)":n}<span class="sw3"><i style="--c:${c}"></i><i style="--c:${ink}"></i><i style="--c:${bg};box-shadow:inset 0 0 0 1px #e5dfe1!important"></i></span></span><span class="ck">✓</span></button>`).join("")}
 {let k="basic";try{k=localStorage.getItem("wishdogam-skin")||"basic"}catch(_){}setSkin(k)}
 $("skinBtn").addEventListener("click",e=>{e.stopPropagation();const P=$("skinPop"),open=P.hidden;P.hidden=!open;$("skinBtn").setAttribute("aria-expanded",open);
   if(open){const r=$("skinBtn").getBoundingClientRect();P.style.top=(r.bottom+8)+"px";P.style.right=Math.max(16,innerWidth-r.right)+"px"}});
@@ -1760,7 +1796,7 @@ $("fOverlay").querySelector(".sbody").addEventListener("click",e=>{if(pickSec&&e
 $("fDone").onclick=()=>{$("fOverlay").hidden=true};
 $("fOverlay").addEventListener("click",e=>{if(e.target.id==="fOverlay")$("fOverlay").hidden=true});
 $("fReset").onclick=()=>{Object.assign(state,{cat:"all",series:"all",color:"all",shop:"all"});saveUi();render()};
-$("serSeg").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;state.series=b.dataset.v;saveUi();render()});
+$("serSeg").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;state.series=b.dataset.v;if(b.dataset.v!=="all"){state.q="";const q=$("q");if(q)q.value=""}saveUi();render()});
 $("shopSeg").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;state.shop=b.dataset.v;saveUi();render()});
 $("sortSel").innerHTML=SORTS.map(([k,l])=>`<option value="${k}">${l}</option>`).join("");
 $("sortSel").addEventListener("change",e=>{state.sort=e.target.value;saveUi();render()});
@@ -1845,7 +1881,7 @@ function syncForm(){
   $("fColors").innerHTML=COLORS.map(([n,h])=>`<button type="button" class="chip" data-v="${n}" aria-pressed="${formColors.includes(n)}"><span class="sw" style="background:${h}"></span>${n}</button>`).join("");
 }
 $("fLineup").addEventListener("click",e=>{const b=e.target.closest("[data-lid]");if(!b)return;const x=state.items.find(i=>i.id===b.dataset.lid);if(x){openForm(x);document.querySelector("#overlay .sheet").scrollTo({top:0})}});
-$("fSeries").addEventListener("click",e=>{const s=e.target.closest("[data-series]");if(s){closeForm();state.series=s.dataset.series;state.status="all";saveUi();render();try{document.querySelector(".main").scrollTo({top:0});window.scrollTo({top:0})}catch(_){}return}
+$("fSeries").addEventListener("click",e=>{const s=e.target.closest("[data-series]");if(s){closeForm();state.series=s.dataset.series;state.status="all";state.q="";{const q=$("q");if(q)q.value=""}saveUi();render();try{document.querySelector(".main").scrollTo({top:0});window.scrollTo({top:0})}catch(_){}return}
   const b=e.target.closest("[data-lid]");if(!b)return;const x=state.items.find(i=>i.id===b.dataset.lid);if(x){openForm(x);document.querySelector("#overlay .sheet").scrollTo({top:0})}});
 $("fStatus").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;formStatus=b.dataset.v;syncForm()});
 $("fColors").addEventListener("click",e=>{const b=e.target.closest(".chip");if(!b)return;const v=b.dataset.v;formColors=formColors.includes(v)?formColors.filter(x=>x!==v):formColors.concat(v);syncForm()});
@@ -1946,6 +1982,13 @@ rateText();render();
 /* 오프라인 지원: 사이트로 열었을 때만 (파일 더블클릭으로 열면 건너뜀) */
 if("serviceWorker" in navigator&&/^https?:$/.test(location.protocol))addEventListener("load",()=>{navigator.serviceWorker.register("sw.js").catch(()=>{})});
 
+
+/* 위쪽 버튼 따라오기 */
+(()=>{const bar=document.querySelector(".tb-btns");if(!bar)return;const ph=document.createElement("div");ph.className="tb-ph";
+  const chk=()=>{const on=(window.scrollY||document.documentElement.scrollTop||(document.querySelector(".main")||{}).scrollTop||0)>80&&!document.body.classList.contains("sharing");
+    if(on&&!bar.classList.contains("float")){ph.style.width=bar.offsetWidth+"px";ph.style.height=bar.offsetHeight+"px";bar.after(ph);bar.classList.add("float")}
+    else if(!on&&bar.classList.contains("float")){bar.classList.remove("float");ph.remove()}};
+  window.addEventListener("scroll",chk,{passive:true});const mn=document.querySelector(".main");if(mn)mn.addEventListener("scroll",chk,{passive:true});chk()})();
 </script>
 </body>
 </html>
