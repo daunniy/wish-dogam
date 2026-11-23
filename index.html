@@ -852,6 +852,8 @@ h1::after{display:none!important;content:none!important}
 .ufv span{width:40px;height:40px;border-radius:50%;overflow:hidden;box-shadow:0 0 0 2px var(--sw);background:#fff}.ufv img{width:100%;height:100%;object-fit:cover}
 .ufv[aria-pressed="true"]{border-color:var(--sw);background:color-mix(in srgb,var(--sw) 14%,#fff)}
 #userBtn .ubimg{width:28px;height:28px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 2px var(--pink2)}
+
+.ca:has(> .ab:nth-child(4)){gap:4px}.ca:has(> .ab:nth-child(4)) > .ab{padding:0 2px;font-size:12.5px;white-space:nowrap;letter-spacing:-.02em}.ca:has(> .ab:nth-child(4)) > .ab.go:not(.mk){flex:1.25}
 </style>
 </head>
 <body>
@@ -1453,7 +1455,7 @@ const ownBtn=i=>readOnly||i.status==="pass"?"":`<button type="button" class="ob"
 const passBtn=i=>readOnly?"":i.status==="pass"?`<button type="button" class="hb pb" data-act="undo" aria-pressed="true" aria-label="방어 취소" title="방어 취소">${ic("shield")}</button>`:(i.status==="wish"&&state.status==="wish")?`<button type="button" class="hb pb" data-act="pass" aria-pressed="false" aria-label="방어" title="방어">${ic("shield")}</button>`:"";
 const mkLinks=i=>{const lh=i.link&&safeUrl(i.link);const jq=mqOf(i);
   const a=lh?`<a class="ab go" href="${esc(lh)}" target="_blank" rel="noopener">${esc(i.linkLabel||((i.shop0||i.shop)==="일본 공식몰"?"일치마":(i.shop0||i.shop)==="나가노 마켓"?"나가노마켓":"공식홈"))}</a>`:"";
-  const m=jq?`<a class="ab go mk" href="https://jp.mercari.com/search?keyword=${encodeURIComponent(jq)}" target="_blank" rel="noopener">메루카리</a>`:`<a class="ab go mk" href="https://m.bunjang.co.kr/search/products?q=${encodeURIComponent(bunjangQ(i))}" target="_blank" rel="noopener">번개장터</a>`;
+  const sh=!!lh&&!!jq,bj=`<a class="ab go mk" href="https://m.bunjang.co.kr/search/products?q=${encodeURIComponent(bunjangQ(i))}" target="_blank" rel="noopener">${sh?"번장":"번개장터"}</a>`;const m=jq?`<a class="ab go mk" href="https://jp.mercari.com/search?keyword=${encodeURIComponent(jq)}" target="_blank" rel="noopener">${sh?"메루":"메루카리"}</a>`+bj:bj;
   const c=readOnly||i.status==="bought"||i.status==="pass"?"":`<button type="button" class="ab cb2" data-act="cart" aria-pressed="${!!i.cart}" aria-label="${i.cart?"장바구니에서 빼기":"장바구니에 담기"}" title="${i.cart?"장바구니에서 빼기":"장바구니에 담기"}">${ic("cart","i sm")}</button>`;
   return a+m+c};
 function card(i,k){
