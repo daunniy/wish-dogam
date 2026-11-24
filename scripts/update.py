@@ -675,6 +675,20 @@ def auto_series(items):
         if i.get("series") and not i["series"].startswith("할로윈"): continue
         y=year(i) or ky.get(key(i),"")
         i["series"]=f"할로윈 {y}" if y else "할로윈"
+    # 같은 날 나온 같은 이름의 캐릭터별 라인업 → 시리즈로 묶기 (예: 마루푸와 마스코트·인형 S)
+    TYPE=r"\s*(마스코트|인형 ?[SML]?|누이 ?[SML]?|봉제 인형|키링|키홀더|피규어|스티커|뱃지|캔뱃지|아크릴 스탠드|파우치)$"
+    def lbase(i):
+        n=re.sub(r"\s*\([^()]*\)\s*$","",i.get("name","")).strip();n=re.sub(r"^치이카와\s+","",n)
+        for _ in range(2): n=re.sub(TYPE,"",n).strip()
+        return n
+    grp={}
+    for i in items:
+        if i.get("series") or not str(i["id"]).startswith(("jp-","ng-","pk-")): continue
+        r=(i.get("released") or "")[:7];b=lbase(i)
+        if r and len(b)>=2: grp.setdefault((b,r),[]).append(i)
+    for (b,r),v in grp.items():
+        if len({x.get("character") for x in v})>=3:
+            for x in v: x["series"]=b
 
 BUNDLE_DROP={"mq","nameSrc","addedAt","jaSrc"}
 def bundle():

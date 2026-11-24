@@ -420,7 +420,7 @@ body.me-mode .friends,body.me-mode .fbar,body.me-mode .viewbar,body.me-mode #rat
 .fchip.rs{background:transparent;box-shadow:none;color:var(--tint);padding:0 8px}
 #fOverlay.one .glab{display:none}
 .pgrid{display:flex;flex-wrap:wrap;gap:8px;padding:2px 2px 4px}
-.pgh{flex:0 0 100%;margin:10px 2px 0;font-size:12.5px;font-weight:700;color:var(--label2);letter-spacing:.02em}.pgh:first-of-type{margin-top:4px}.pill .pm{font-size:11px;color:var(--label2);font-weight:600;margin-right:1px}
+.pgh{flex:0 0 100%;margin:10px 2px 0;font-size:12.5px;font-weight:700;color:var(--label2);letter-spacing:.02em}.pgh:first-of-type{margin-top:4px}.pill.more{flex:0 0 100%;justify-content:center;background:transparent;border-style:dashed;color:var(--label2)}.pill .pm{font-size:11px;color:var(--label2);font-weight:600;margin-right:1px}
 .pgrid .pill{box-shadow:0 0 0 .5px var(--sep);height:36px;font-size:14.5px}
 @media (min-width:900px){
   .friends{flex-wrap:wrap;overflow:visible;gap:2px 0}
@@ -1302,6 +1302,7 @@ function renderLineup(it){const el=$("fLineup");renderSeriesRel(it);
   el.hidden=false;
   el.innerHTML=`<div class="lh"><b>같은 라인업</b><span>${a.length}종 중 ${b}종 토벌</span></div><div class="meter"><i style="width:${b/a.length*100}%"></i></div><div class="lgrid">${a.map(x=>`<button type="button" class="lc ${x.id===it.id?"cur":""} ${x.status==="bought"?"own":""}" data-lid="${esc(x.id)}" style="--cc:${CH_COLOR[x.character]||"#d1d1d6"}"><span class="lb"><span class="art">${imgHtml(x)}</span>${x.status==="bought"?`<span class="lo">${ic("spear","i sm")}</span>`:x.status==="wish"?`<span class="lo w">${ic("heart","i sm")}</span>`:""}</span><span class="ll">${x.id===it.id?"보는 중":esc(x.character||"")}</span></button>`).join("")}</div>`;
 }
+let SER_ALL=false;
 const SHOPN={"일본 공식몰":"일치마 (일본 공식)","나가노 마켓":"나가노마켓","치이카와 포켓 스토어":"치이카와 포켓","이치방쿠지·쿠지":"쿠지 (이치방쿠지 등)","티몰 공식몰":"중치마 (중국 공식 · 티몰)","미니소":"미니소 (중국)","대원샵":"대원미디어 (한국 공식)","대원미디어 (네이버)":"대원미디어 (한국 공식)","특전":"특전·비매품","특전(비매품)":"특전·비매품","영화관 입장 특전":"특전·비매품","경품(프라이즈)":"경품 (프라이즈)","모구모구 혼포 (오타루 베이비 카스테라점)":"모구모구 혼포","홍콩 한정":"홍콩·대만 한정","대만 한정":"홍콩·대만 한정","기타 콜라보·이벤트":"콜라보·기타","산리오 콜라보 (기타)":"콜라보·기타","기타 (공식몰 외)":"콜라보·기타","지역 한정":"콜라보·기타"};
 const SHOP_GROUPS=[["일본",["일치마 (일본 공식)","치이카와 포켓","나가노마켓","모구모구 혼포","돈키호테","9090"]],["뽑기·경품·특전",["가챠","쿠지 (이치방쿠지 등)","경품 (프라이즈)","반다이 식완","특전·비매품"]],["한국",["대원미디어 (한국 공식)","한국 한정"]],["중국·대만·홍콩",["중치마 (중국 공식 · 티몰)","미니소 (중국)","중국 한정","홍콩·대만 한정"]],["그 밖에",["콜라보·기타","지난 굿즈"]]];
 const normDate=r=>{const m=String(r||"").match(/(\d{4})[.\-/년 ]*(\d{1,2})?/);return m?m[1]+"."+String(m[2]||"01").padStart(2,"0"):""};
@@ -1443,7 +1444,9 @@ function renderFilters(){applyAccent();
   const srel={};state.items.forEach(i=>{const x=seriesOf(i);const r=normDate(i.released);if(x&&r&&(!srel[x]||r>srel[x]))srel[x]=r});
   const sers=Object.keys(sc2).concat(state.series!=="all"&&!sc2[state.series]?[state.series]:[]).sort((x,y)=>(srel[y]||"").localeCompare(srel[x]||"")||(sc2[y]||[0])[0]-(sc2[x]||[0])[0]);
   let sh=`<button type="button" class="pill" data-v="all" aria-pressed="${state.series==="all"}">모든 시리즈</button>`,lastY=null;
-  sers.forEach(x=>{const y=(srel[x]||"").slice(0,4)||"날짜 모름";if(y!==lastY){sh+=`<div class="pgh">${y==="날짜 모름"?y:y+"년"}</div>`;lastY=y}const [t,b]=sc2[x]||[0,0];const m=(srel[x]||"").slice(5,7);sh+=`<button type="button" class="pill" data-v="${esc(x)}" aria-pressed="${state.series===x}" title="${t}종 중 ${b}종 토벌${srel[x]?" · 최근 발매 "+srel[x]:""}">${m?`<small class="pm">${+m}월</small>`:""}${esc(x)}<span class="n">${se(x)}</span>${b?`<span class="pc">${Math.round(b/t*100)||"<1"}%</span>`:""}</button>`});
+  const small=sers.filter(x=>(sc2[x]||[0])[0]<8&&x!==state.series);const showS=SER_ALL||small.length<6;
+  sers.filter(x=>showS||!small.includes(x)).forEach(x=>{const y=(srel[x]||"").slice(0,4)||"날짜 모름";if(y!==lastY){sh+=`<div class="pgh">${y==="날짜 모름"?y:y+"년"}</div>`;lastY=y}const [t,b]=sc2[x]||[0,0];const m=(srel[x]||"").slice(5,7);sh+=`<button type="button" class="pill" data-v="${esc(x)}" aria-pressed="${state.series===x}" title="${t}종 중 ${b}종 토벌${srel[x]?" · 최근 발매 "+srel[x]:""}">${m?`<small class="pm">${+m}월</small>`:""}${esc(x)}<span class="n">${se(x)}</span>${b?`<span class="pc">${Math.round(b/t*100)||"<1"}%</span>`:""}</button>`});
+  if(small.length>=6)sh+=`<button type="button" class="pill more" data-more="1">${SER_ALL?"작은 시리즈 접기":`작은 시리즈 ${small.length}개 더 보기`}</button>`;
   $("serSeg").innerHTML=sh;
   $("sortSel").value=state.sort;
   $("viewSeg").innerHTML=VIEWS.map(([k,,icn,l])=>`<button type="button" data-v="${k}" aria-pressed="${state.view===k}" aria-label="${l} 보기" title="${l}">${ic(icn,"i sm")}</button>`).join("");
@@ -1876,7 +1879,7 @@ $("fOverlay").querySelector(".sbody").addEventListener("click",e=>{if(pickSec&&e
 $("fDone").onclick=()=>{$("fOverlay").hidden=true};
 $("fOverlay").addEventListener("click",e=>{if(e.target.id==="fOverlay")$("fOverlay").hidden=true});
 $("fReset").onclick=()=>{Object.assign(state,{cat:"all",series:"all",color:"all",shop:"all"});saveUi();render()};
-$("serSeg").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;state.series=b.dataset.v;if(b.dataset.v!=="all"){state.q="";const q=$("q");if(q)q.value=""}saveUi();render()});
+$("serSeg").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;if(b.dataset.more){SER_ALL=!SER_ALL;renderFilters();return}state.series=b.dataset.v;if(b.dataset.v!=="all"){state.q="";const q=$("q");if(q)q.value=""}saveUi();render()});
 $("shopSeg").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;state.shop=b.dataset.v;saveUi();render()});
 $("sortSel").innerHTML=SORTS.map(([k,l])=>`<option value="${k}">${l}</option>`).join("");
 $("sortSel").addEventListener("change",e=>{state.sort=e.target.value;saveUi();render()});
